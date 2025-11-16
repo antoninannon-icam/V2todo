@@ -23,19 +23,6 @@
       color-scheme: light;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    
-    /*@media (prefers-color-scheme: dark){
-      :root{
-        --bg:#0b0c0e;
-        --card:#0f1113;
-        --muted:#9aa3b2;
-        --accent:#007AFF;
-        --accent-strong:#3390ff;
-        --shadow: 0 8px 24px rgba(2,6,23,0.72);
-      }
-      html { color-scheme: dark; }
-    }
-    */
 
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -99,9 +86,6 @@
       padding:10px 14px;border-radius:var(--radius-pill);
       border:1px solid rgba(0,0,0,0.04);
     }
-    @media (prefers-color-scheme: dark){
-      .input { border:1px solid rgba(255,255,255,0.03); }
-    }
     .input input{
       border:0;outline:none;background:transparent;font-size:15px;width:100%;
     }
@@ -120,9 +104,7 @@
       background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0));
       padding:12px 14px;border-radius:var(--radius-pill);display:flex;flex-direction:column;gap:6px;
       box-shadow:none;border:1px solid rgba(0,0,0,0.03);
-    }
-    @media (prefers-color-scheme: dark){
-      .card{ border:1px solid rgba(255,255,255,0.02); }
+      transition: all 0.2s ease;
     }
     .row{
       display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -132,12 +114,75 @@
       width:36px;height:36px;border-radius:999px;border:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;
     }
     .task-title{font-size:15px;margin:0}
-    .meta{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center;margin-top:4px}
+    .meta{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center;margin-top:4px;flex-wrap:wrap}
 
     .actions{display:flex;gap:8px;align-items:center}
     .chip{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,0.03)}
 
     .done .task-title{ text-decoration: line-through; color: var(--muted) }
+
+    /* ====== Edit mode ====== */
+    .card.editing {
+      padding: 18px;
+      gap: 12px;
+      border: none;
+    }
+    .edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: slideDown 0.2s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .edit-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0));
+      padding: 10px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .edit-field input, .edit-field select {
+      border: 0;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      flex: 1;
+      color: inherit;
+    }
+    .edit-field .material-icons {
+      color: var(--muted);
+      font-size: 20px;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+    .edit-actions button {
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-save {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-cancel {
+      background: rgba(0,0,0,0.03);
+      color: var(--muted);
+    }
 
     /* ====== Completed area collapsible ====== */
     details{background:transparent;border:0}
@@ -177,7 +222,7 @@
     <section class="input-row">
       <div class="input">
         <span class="material-icons" style="color:var(--muted)">edit_note</span>
-        <input id="taskInput" placeholder="Que dois-tu faire ? (ex: Appeler Annick samedi à 15h)" />
+        <input id="taskInput" placeholder="Que dois-tu faire ? (ex: Anniv de Jean vendredi)" />
       </div>
       <button id="addBtn" class="btn"><span class="material-icons">add</span> Ajouter</button>
     </section>
@@ -210,7 +255,7 @@
   <script>
     /* ======= Helper & storage ======= */
     const STORAGE_KEY = 'todo_plus_tasks_v1';
-    let tasks = []; // {id,title,date,time,category,priority,done,createdAt}
+    let tasks = [];
 
     function save() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -223,62 +268,166 @@
     }
     function uid() { return Math.random().toString(36).slice(2,9); }
 
-    /* ======= Simple French natural-language parsing (MVP) ======= */
+    /* ======= Enhanced French natural-language parsing ======= */
     function parseInput(text){
       text = (text || '').trim();
       if(!text) return null;
 
       const lower = text.toLowerCase();
+      let toRemove = [];
 
       // detect time patterns (ex: 15h, 15h30, 15:30)
       let time = null;
       const timeMatch = lower.match(/(\b[0-2]?\d(?:h[0-5]?\d|\:[0-5]\d)?\b)/);
       if(timeMatch){
         time = timeMatch[1].replace('h', ':').replace('H',':').replace(/\s+/g,'');
+        toRemove.push(timeMatch[1]);
       }
 
-      // detect explicit date patterns dd/mm[/yyyy] or yyyy-mm-dd
+      // detect time of day (matin, après-midi, soir)
+      if(lower.match(/\bapr[eè]s[-\s]?midi\b/)){
+        if(!time) time = '14:00';
+        toRemove.push('après-midi', 'après midi', 'apres-midi', 'apres midi');
+      } else if(lower.includes('matin')){
+        if(!time) time = '09:00';
+        toRemove.push('matin');
+      } else if(lower.includes('soir')){
+        if(!time) time = '19:00';
+        toRemove.push('soir');
+      }
+
       let date = null;
-      const dateMatch = lower.match(/(\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b)/);
-      if(dateMatch) {
-        const d = dateMatch[1];
-        // normalize to yyyy-mm-dd if possible
-        const parts = d.split(/[\/\-]/).map(x=>parseInt(x,10));
-        if(parts.length >= 2){
-          let day = parts[0], month = parts[1], year = parts[2];
-          if(year === undefined || year < 100) {
-            const now = new Date();
-            year = now.getFullYear();
-          }
-          // pad
-          const mm = String(month).padStart(2,'0'), dd = String(day).padStart(2,'0');
-          date = `${year}-${mm}-${dd}`;
-        }
+
+      // Detect "dans X jours/semaines/mois/ans"
+      const relativeMatch = lower.match(/dans\s+(\d+)\s+(jour|semaine|mois|an|année)[s]?/);
+      if(relativeMatch){
+        const amount = parseInt(relativeMatch[1], 10);
+        const unit = relativeMatch[2];
+        const d = new Date();
+        
+        if(unit === 'jour') d.setDate(d.getDate() + amount);
+        else if(unit === 'semaine') d.setDate(d.getDate() + (amount * 7));
+        else if(unit === 'mois') d.setMonth(d.getMonth() + amount);
+        else if(unit === 'an' || unit === 'année') d.setFullYear(d.getFullYear() + amount);
+        
+        date = d.toISOString().slice(0,10);
+        toRemove.push(relativeMatch[0]);
       }
 
-      // keywords: aujourd'hui, demain, lundi, mardi... (français)
+      // Detect "la semaine prochaine"
+      if(!date && lower.includes('la semaine prochaine')){
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        date = d.toISOString().slice(0,10);
+        toRemove.push('la semaine prochaine');
+      }
+
+      // Detect dates with month names: "12 décembre", "25 janvier"
+      const monthNames = {
+        'janvier': 1, 'février': 2, 'fevrier': 2, 'mars': 3, 'avril': 4,
+        'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8, 'aout': 8,
+        'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12, 'decembre': 12
+      };
+      
       if(!date){
-        const weekdays = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-        for(let i=0;i<weekdays.length;i++){
-          if(lower.includes(weekdays[i])){
-            // compute next weekday date
-            const target = i; // 0 Sunday
-            const today = new Date();
-            const todayIdx = today.getDay();
-            let diff = (target - todayIdx + 7) % 7;
-            if(diff === 0 && !lower.includes("aujourd")) diff = 7; // if user said "samedi" and today is saturday, assume next week unless "aujourd'hui"
-            const d = new Date();
-            d.setDate(d.getDate() + diff);
-            date = d.toISOString().slice(0,10);
+        for(const [monthName, monthNum] of Object.entries(monthNames)){
+          const monthPattern = new RegExp(`(\\b\\d{1,2})\\s+${monthName}\\b`, 'i');
+          const match = lower.match(monthPattern);
+          if(match){
+            const day = parseInt(match[1], 10);
+            const now = new Date();
+            let year = now.getFullYear();
+            
+            // If the date has passed this year, use next year
+            const testDate = new Date(year, monthNum - 1, day);
+            if(testDate < now){
+              year++;
+            }
+            
+            const mm = String(monthNum).padStart(2,'0');
+            const dd = String(day).padStart(2,'0');
+            date = `${year}-${mm}-${dd}`;
+            toRemove.push(match[0], monthName, 'le');
             break;
           }
         }
+      }
+
+      // detect explicit date patterns dd/mm[/yyyy] or yyyy-mm-dd
+      if(!date){
+        const dateMatch = lower.match(/(\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b)/);
+        if(dateMatch) {
+          const d = dateMatch[1];
+          toRemove.push(d);
+          const parts = d.split(/[\/\-]/).map(x=>parseInt(x,10));
+          if(parts.length >= 2){
+            let day = parts[0], month = parts[1], year = parts[2];
+            if(year === undefined || year < 100) {
+              const now = new Date();
+              year = now.getFullYear();
+            }
+            const mm = String(month).padStart(2,'0'), dd = String(day).padStart(2,'0');
+            date = `${year}-${mm}-${dd}`;
+          }
+        }
+      }
+
+      // keywords: aujourd'hui, demain, lundi, mardi... with "dans X semaines"
+      if(!date){
+        const weekdays = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+        
+        // Check for "jour dans X semaines"
+        for(let i=0;i<weekdays.length;i++){
+          const weekdayPattern = new RegExp(`${weekdays[i]}\\s+dans\\s+(\\d+)\\s+semaine[s]?`, 'i');
+          const match = lower.match(weekdayPattern);
+          if(match){
+            const weeksAhead = parseInt(match[1], 10);
+            const target = i;
+            const today = new Date();
+            const todayIdx = today.getDay();
+            let diff = (target - todayIdx + 7) % 7;
+            if(diff === 0) diff = 7;
+            
+            // Add the weeks
+            diff += (weeksAhead - 1) * 7;
+            
+            const d = new Date();
+            d.setDate(d.getDate() + diff);
+            date = d.toISOString().slice(0,10);
+            toRemove.push(weekdays[i], 'dans', match[1], 'semaine', 'semaines');
+            break;
+          }
+        }
+        
+        // Regular weekday detection
         if(!date){
-          if(lower.includes('aujourd')) {
+          for(let i=0;i<weekdays.length;i++){
+            if(lower.includes(weekdays[i])){
+              toRemove.push(weekdays[i]);
+              if(lower.includes(weekdays[i] + ' prochain') || lower.includes('prochain ' + weekdays[i])){
+                toRemove.push('prochain');
+              }
+              const target = i;
+              const today = new Date();
+              const todayIdx = today.getDay();
+              let diff = (target - todayIdx + 7) % 7;
+              if(diff === 0 && !lower.includes("aujourd")) diff = 7;
+              const d = new Date();
+              d.setDate(d.getDate() + diff);
+              date = d.toISOString().slice(0,10);
+              break;
+            }
+          }
+        }
+        
+        if(!date){
+          if(lower.includes('aujourd')){
             date = (new Date()).toISOString().slice(0,10);
-          } else if(lower.includes('demain')) {
+            toRemove.push('aujourd\'hui', 'aujourd hui', 'aujourd');
+          } else if(lower.includes('demain')){
             const d = new Date(); d.setDate(d.getDate()+1);
             date = d.toISOString().slice(0,10);
+            toRemove.push('demain');
           }
         }
       }
@@ -302,21 +451,22 @@
       if(lower.includes('urgent') || lower.includes('tout de suite') || lower.includes('immédiat')) priority = 'Haute';
       if(lower.includes('facultatif') || lower.includes('plus tard')) priority = 'Basse';
 
-      // title: remove detected date/time words for cleanliness
+      // Clean title: remove all detected temporal phrases
       let title = text;
-      title = title.replace(/\b(demain|aujourd'hui|aujourd’hui)\b/ig,'');
-      title = title.replace(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/ig,'');
-      if(time) title = title.replace(time,'');
-      if(dateMatch) title = title.replace(dateMatch[1],'');
-      title = title.trim();
-      if(!title) title = text; // fallback
+      toRemove.forEach(phrase => {
+        const regex = new RegExp('\\b' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+        title = title.replace(regex, ' ');
+      });
+      
+      title = title.replace(/\s+/g, ' ').trim();
+      if(!title) title = text;
 
       return {
         id: uid(),
         title: title,
         raw: text,
-        date: date,       // yyyy-mm-dd or null
-        time: time,       // hh:mm or null
+        date: date,
+        time: time,
         category,
         priority,
         done: false,
@@ -339,7 +489,6 @@
       countPending.textContent = pending.length;
       countDone.textContent = done.length;
 
-      // sort pending by priority (Haute, Moyenne, Basse) then date
       const order = { 'Haute':0,'Moyenne':1,'Basse':2 };
       pending.sort((a,b)=>{
         const p = (order[a.priority] - order[b.priority]) || ( (a.date||'9999') > (b.date||'9999') ? 1 : -1 ) || a.createdAt.localeCompare(b.createdAt);
@@ -354,7 +503,8 @@
       const card = document.createElement('div');
       card.className = 'card' + (t.done ? ' done' : '');
       card.dataset.id = t.id;
-      card.innerHTML = `
+      
+      const normalView = `
         <div class="row">
           <div class="task-left">
             <div class="check" data-action="toggle" title="Terminer / réouvrir">
@@ -379,7 +529,8 @@
           </div>
         </div>
       `;
-      // event delegation via buttons handled later
+      
+      card.innerHTML = normalView;
       return card;
     }
 
@@ -408,7 +559,6 @@
       scheduleNotificationFor(parsed);
     }
 
-    // delegate clicks in lists
     document.getElementById('todoList').addEventListener('click', handleListClick);
     document.getElementById('doneList').addEventListener('click', handleListClick);
 
@@ -421,6 +571,7 @@
       const id = card.dataset.id;
       const idx = tasks.findIndex(x=>x.id===id);
       if(idx === -1) return;
+      
       if(act === 'toggle'){
         tasks[idx].done = !tasks[idx].done;
         save();
@@ -431,35 +582,93 @@
         }
       } else if(act === 'edit'){
         editTask(tasks[idx]);
+      } else if(act === 'cancel-edit'){
+        render();
+      } else if(act === 'save-edit'){
+        const titleInput = document.getElementById(`edit-title-${id}`);
+        const dateInput = document.getElementById(`edit-date-${id}`);
+        const timeInput = document.getElementById(`edit-time-${id}`);
+        const categoryInput = document.getElementById(`edit-category-${id}`);
+        const priorityInput = document.getElementById(`edit-priority-${id}`);
+        
+        if(titleInput) tasks[idx].title = titleInput.value.trim() || tasks[idx].title;
+        if(dateInput) tasks[idx].date = dateInput.value || null;
+        if(timeInput) tasks[idx].time = timeInput.value || null;
+        if(categoryInput) tasks[idx].category = categoryInput.value;
+        if(priorityInput) tasks[idx].priority = priorityInput.value;
+        
+        save();
       }
     }
 
     function editTask(t){
-      // simple prompt-based editor (MVP)
-      const newTitle = prompt('Modifier la tâche', t.title);
-      if(newTitle === null) return;
-      t.title = newTitle.trim() || t.title;
-
-      const newDate = prompt('Date (yyyy-mm-dd) ou vide', t.date || '');
-      if(newDate !== null) t.date = newDate.trim() || null;
-
-      const newTime = prompt('Heure (hh:mm) ou vide', t.time || '');
-      if(newTime !== null) t.time = newTime.trim() || null;
-
-      const newCat = prompt('Catégorie', t.category || 'Personnel');
-      if(newCat !== null) t.category = newCat.trim() || 'Personnel';
-
-      const newPri = prompt('Priorité (Haute / Moyenne / Basse)', t.priority || 'Moyenne');
-      if(newPri !== null) t.priority = newPri.trim() || 'Moyenne';
-
-      save();
+      const card = document.querySelector(`.card[data-id="${t.id}"]`);
+      if(!card) return;
+      
+      card.classList.add('editing');
+      
+      const editForm = `
+        <div class="edit-form">
+          <div class="edit-field">
+            <span class="material-icons">edit_note</span>
+            <input type="text" id="edit-title-${t.id}" value="${escapeHtml(t.title)}" placeholder="Titre de la tâche" />
+          </div>
+          
+          <div class="edit-field">
+            <span class="material-icons">calendar_today</span>
+            <input type="date" id="edit-date-${t.id}" value="${t.date || ''}" />
+          </div>
+          
+          <div class="edit-field">
+            <span class="material-icons">schedule</span>
+            <input type="time" id="edit-time-${t.id}" value="${t.time || ''}" />
+          </div>
+          
+          <div class="edit-field">
+            <span class="material-icons">label</span>
+            <select id="edit-category-${t.id}">
+              <option value="Personnel" ${t.category === 'Personnel' ? 'selected' : ''}>Personnel</option>
+              <option value="Courses" ${t.category === 'Courses' ? 'selected' : ''}>Courses</option>
+              <option value="Santé" ${t.category === 'Santé' ? 'selected' : ''}>Santé</option>
+              <option value="Travail" ${t.category === 'Travail' ? 'selected' : ''}>Travail</option>
+              <option value="Administratif" ${t.category === 'Administratif' ? 'selected' : ''}>Administratif</option>
+            </select>
+          </div>
+          
+          <div class="edit-field">
+            <span class="material-icons">flag</span>
+            <select id="edit-priority-${t.id}">
+              <option value="Basse" ${t.priority === 'Basse' ? 'selected' : ''}>Basse</option>
+              <option value="Moyenne" ${t.priority === 'Moyenne' ? 'selected' : ''}>Moyenne</option>
+              <option value="Haute" ${t.priority === 'Haute' ? 'selected' : ''}>Haute</option>
+            </select>
+          </div>
+          
+          <div class="edit-actions">
+            <button class="btn-cancel" data-action="cancel-edit">
+              <span class="material-icons" style="font-size:16px">close</span>
+              Annuler
+            </button>
+            <button class="btn-save" data-action="save-edit">
+              <span class="material-icons" style="font-size:16px">check</span>
+              Valider
+            </button>
+          </div>
+        </div>
+      `;
+      
+      card.innerHTML = editForm;
+      
+      setTimeout(() => {
+        const titleInput = document.getElementById(`edit-title-${t.id}`);
+        if(titleInput) titleInput.focus();
+      }, 100);
     }
 
     /* ======= Controls: clear, export, import, notifications ======= */
     document.getElementById('clearDone').addEventListener('click', ()=>{ if(confirm('Vider la liste des tâches terminées ?')){ tasks = tasks.filter(t=>!t.done); save(); } });
     document.getElementById('clearAll').addEventListener('click', ()=>{ if(confirm('Supprimer toutes les tâches ?')){ tasks = []; save(); } });
 
-    // Export
     document.getElementById('btnExport').addEventListener('click', ()=>{
       const data = JSON.stringify(tasks, null, 2);
       const blob = new Blob([data], {type:'application/json'});
@@ -470,7 +679,6 @@
       URL.revokeObjectURL(url);
     });
 
-    // Import
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnImport').addEventListener('click', ()=> fileInput.click());
     fileInput.addEventListener('change', async (e)=>{
@@ -480,7 +688,6 @@
         const text = await f.text();
         const imported = JSON.parse(text);
         if(Array.isArray(imported)){
-          // simple merge with generated ids if collision
           for(const it of imported){
             it.id = it.id || uid();
             tasks.push(it);
@@ -492,7 +699,6 @@
       fileInput.value = '';
     });
 
-    // Notification permission
     const btnNotif = document.getElementById('btnNotif');
     btnNotif.addEventListener('click', async ()=>{
       if(!("Notification" in window)){
@@ -508,8 +714,7 @@
       }
     });
 
-    /* ======= Notification scheduling (page-open only) ======= */
-    // We'll (re)compute next upcoming notifications on load/save.
+    /* ======= Notification scheduling ======= */
     let scheduledTimers = [];
     function clearTimers(){ scheduledTimers.forEach(id=>clearTimeout(id)); scheduledTimers = []; }
 
@@ -520,10 +725,8 @@
       for(const t of tasks){
         if(t.done) continue;
         if(t.date){
-          // build timestamp
           let ts = new Date(t.date + 'T00:00:00').getTime();
           if(t.time){
-            // ensure time like hh:mm
             const parts = t.time.split(':').map(x=>parseInt(x,10));
             if(parts.length>=2){
               const d = new Date(t.date);
@@ -531,11 +734,10 @@
               ts = d.getTime();
             }
           } else {
-            // default 9am
             const d = new Date(t.date); d.setHours(9,0,0,0); ts = d.getTime();
           }
           const delay = ts - now;
-          if(delay > 0 && delay < 1000 * 60 * 60 * 24 * 7){ // schedule only within a week (MVP)
+          if(delay > 0 && delay < 1000 * 60 * 60 * 24 * 7){
             const id = setTimeout(()=>{
               new Notification('ToDo+: ' + t.title, { body: `${t.date}${t.time ? ' ' + t.time : ''} — ${t.category}` });
             }, delay);
@@ -546,7 +748,6 @@
     }
 
     function scheduleNotificationFor(task){
-      // convenience: schedule single one after save
       scheduleAllNotifications();
     }
 
@@ -555,23 +756,19 @@
     render();
     scheduleAllNotifications();
 
-    // re-schedule on visibility change
     document.addEventListener('visibilitychange', ()=> {
       if(document.visibilityState === 'visible') scheduleAllNotifications();
       else clearTimers();
     });
 
-    // small UX: press Ctrl+Enter to add with input focused
     document.addEventListener('keydown', (e)=> {
       if(e.ctrlKey && e.key === 'Enter'){
         onAdd();
       }
     });
 
-    // friendly fallback: prompt user to enable notifications once if tasks with dates exist
     setTimeout(()=>{
       if(Notification.permission !== 'granted' && tasks.some(t=>t.date)) {
-        // non-intrusive: change button color
         btnNotif.style.color = 'var(--accent)';
       }
     },2000);
