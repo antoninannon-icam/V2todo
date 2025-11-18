@@ -436,12 +436,12 @@
         </div>
         
         <div class="preview-section">
-          <h3>📋 Prochaines tâches</h3>
+          <h3>Prochaines tâches</h3>
           <div class="preview-cards" id="todoPreview"></div>
         </div>
         
         <div class="preview-section">
-          <h3>💡 Dernières idées</h3>
+          <h3>Dernières idées</h3>
           <div class="preview-cards" id="ideasPreview"></div>
         </div>
       </div>
@@ -470,7 +470,7 @@
       <section class="input-row">
         <div class="input">
           <span class="material-icons" style="color:var(--muted)">edit_note</span>
-          <input id="taskInput" placeholder="Que dois-tu faire ? (ex: Appeler Annick samedi à 15h)" />
+          <textarea id="taskInput" placeholder="Décris ta tâche (ex: Appeler Annick samedi à 15h)" rows="2"></textarea>
           <button id="micBtnTodo" class="mic-btn" title="Enregistrement vocal">
             <span class="material-icons">mic</span>
           </button>
@@ -578,6 +578,24 @@
         ideas = [];
         customCategories = [];
       }
+      // rétro-compatibilité : si d'anciennes tâches n'ont pas de content, on le fournit
+      tasks = tasks.map(t => {
+        if(!t.content) {
+          // si parseInput a mis raw -> utiliser raw. Sinon essayer title
+          t.content = t.raw || t.title || '';
+        }
+        // Ensure id exists
+        t.id = t.id || uid();
+        // createdAt
+        t.createdAt = t.createdAt || new Date().toISOString();
+        return t;
+      });
+      ideas = ideas.map(i => {
+        i.id = i.id || uid();
+        i.createdAt = i.createdAt || new Date().toISOString();
+        i.content = i.content || i.title || '';
+        return i;
+      });
     }
     
     function showScreen(screen) {
@@ -714,7 +732,7 @@
         }
         
         if(!date){
-          if(lower.includes('aujourd')){
+          if(lower.includes('aujourd')){ 
             date = (new Date()).toISOString().slice(0,10);
             toRemove.push('aujourd\'hui', 'aujourd hui', 'aujourd');
           } else if(lower.includes('demain')){
@@ -754,33 +772,55 @@
         id: uid(),
         title: title,
         raw: text,
+        content: text,
         date: date,
         time: time,
         category,
         priority,
         done: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        expanded: false
       };
     }
     
-    function generateTitle(content) {
-      // Extraction intelligente du titre à partir du contenu
-      const text = content.trim();
-      
-      // Si le texte est court (moins de 40 caractères), on l'utilise tel quel
-      if(text.length <= 40) {
-        return text;
+    /* --- Title generator: semantic, up to 7 words --- */
+    function generateSemanticTitle(content) {
+      if(!content) return '';
+      // Normalize
+      let text = String(content).replace(/\s+/g,' ').trim();
+      // Remove excessive punctuation
+      text = text.replace(/[\r\n]+/g, '. ').replace(/[«»"()]/g, '').trim();
+      // Split sentences to prefer main sentence
+      const sentences = text.split(/[.?!]/).map(s=>s.trim()).filter(Boolean);
+      let main = sentences.length ? sentences[0] : text;
+      // Tokenize words, remove stopwords
+      const stopwords = new Set([
+        'de','la','le','les','des','du','un','une','et','à','a','pour','par','en','sur','avec','sans','au','aux',
+        'que','qui','se','ce','ces','son','sa','sont','dans','est','ne','pas','plus','ou','mais','mon','ma','mes',
+        'ta','ton','tes','vos','votre','il','elle','on','nous','vous','entre','avant','après','apres','aujourd','demain','hier'
+      ]);
+      const words = main.split(/\s+/).map(w => w.replace(/[^\wÀ-ÿ-]/g,'')).filter(Boolean);
+      // Build candidate by keeping non-stopwords, otherwise keep some small words to keep meaning
+      const important = [];
+      for(const w of words){
+        const lw = w.toLowerCase();
+        if(!stopwords.has(lw)) important.push(w);
       }
-      
-      // Sinon, on prend les 5-8 premiers mots intelligemment
-      const words = text.split(/\s+/);
-      let title = words.slice(0, 6).join(' ');
-      
-      // Si le titre se termine au milieu d'une phrase, ajouter "..."
-      if(words.length > 6) {
-        title += '...';
+      // If no important words, fall back to the first words original
+      let chosen = important.length ? important.slice(0,7) : words.slice(0,7);
+      // If chosen too short but original sentence long, try to merge with next sentence words
+      if(chosen.length < 3 && sentences.length > 1) {
+        const nextWords = sentences.slice(1).join(' ').split(/\s+/).map(w=>w.replace(/[^\wÀ-ÿ-]/g,'')).filter(Boolean);
+        chosen = (important.concat(nextWords)).slice(0,7);
       }
-      
+      // Reconstruct title preserving original word casing when possible
+      let title = chosen.join(' ');
+      // Post cleanup: capitalize first letter
+      title = title.replace(/\s+/g,' ').trim();
+      if(!title) {
+        title = words.slice(0,7).join(' ');
+      }
+      title = title.charAt(0).toUpperCase() + title.slice(1);
       return title;
     }
     
@@ -864,30 +904,67 @@
     function renderTaskCard(t){
       const card = document.createElement('div');
       card.className = 'card' + (t.done ? ' done' : '');
+      if(t.expanded) card.classList.add('expanded');
       card.dataset.id = t.id;
       
-      card.innerHTML = `
-        <div class="row">
-          <div class="task-left">
-            <div class="check" data-action="toggle" title="Terminer / réouvrir">
-              <span class="material-icons">${t.done ? 'check' : 'radio_button_unchecked'}</span>
-            </div>
-            <div>
-              <p class="task-title">${escapeHtml(t.title)}</p>
-              <div class="meta">
-                ${t.date ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">calendar_today</span>&nbsp;${formatDateFrench(t.date)}</span>` : ''}
-                ${t.time ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">schedule</span>&nbsp;${t.time}</span>` : ''}
-                <span class="chip">${escapeHtml(t.category)}</span>
-                <span class="chip">${escapeHtml(t.priority)}</span>
+      const contentPreview = (t.content || '').split('\n')[0];
+      
+      // Build meta chips
+      const dateChip = t.date ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">calendar_today</span>&nbsp;${formatDateFrench(t.date)}</span>` : '';
+      const timeChip = t.time ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">schedule</span>&nbsp;${t.time}</span>` : '';
+      const categoryChip = `<span class="chip">${escapeHtml(t.category || 'Personnel')}</span>`;
+      const priorityChip = `<span class="chip">${escapeHtml(t.priority || 'Moyenne')}</span>`;
+      
+      if(t.expanded){
+        card.innerHTML = `
+          <div class="row">
+            <div class="task-left">
+              <div class="check" data-action="toggle" title="Terminer / réouvrir">
+                <span class="material-icons">${t.done ? 'check' : 'radio_button_unchecked'}</span>
+              </div>
+              <div style="flex:1">
+                <p class="task-title">${escapeHtml(t.title)}</p>
+                <div class="meta">
+                  ${dateChip}
+                  ${timeChip}
+                  ${categoryChip}
+                  ${priorityChip}
+                </div>
               </div>
             </div>
+            <div class="actions">
+              <button class="icon-btn" data-action="collapse-task" title="Réduire"><span class="material-icons">expand_less</span></button>
+              <button class="icon-btn" data-action="edit-task" title="Modifier"><span class="material-icons">edit</span></button>
+              <button class="icon-btn" data-action="delete-task" title="Supprimer"><span class="material-icons">delete</span></button>
+            </div>
           </div>
-          <div class="actions">
-            <button class="icon-btn" data-action="edit-task" title="Modifier"><span class="material-icons">edit</span></button>
-            <button class="icon-btn" data-action="delete-task" title="Supprimer"><span class="material-icons">delete</span></button>
+          <div class="note-content">${escapeHtml(t.content)}</div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="row">
+            <div class="task-left">
+              <div class="check" data-action="toggle" title="Terminer / réouvrir">
+                <span class="material-icons">${t.done ? 'check' : 'radio_button_unchecked'}</span>
+              </div>
+              <div>
+                <p class="task-title">${escapeHtml(t.title)}</p>
+                <div class="meta">
+                  ${dateChip}
+                  ${timeChip}
+                  ${categoryChip}
+                  ${priorityChip}
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="icon-btn" data-action="expand-task" title="Consulter"><span class="material-icons">expand_more</span></button>
+              <button class="icon-btn" data-action="edit-task" title="Modifier"><span class="material-icons">edit</span></button>
+              <button class="icon-btn" data-action="delete-task" title="Supprimer"><span class="material-icons">delete</span></button>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
       return card;
     }
     
@@ -980,19 +1057,30 @@
     
     function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     
+    /* ---------- EVENTS and Handlers ---------- */
     document.getElementById('addBtn').addEventListener('click', onAddTask);
-    document.getElementById('taskInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') onAddTask(); });
+    document.getElementById('taskInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddTask(); });
+    // single-line Enter would be inconvenient for textarea; use Ctrl+Enter or Shift+Enter to add
     
     function onAddTask(){
       const input = document.getElementById('taskInput');
       const val = input.value.trim();
       if(!val) return;
+      // parse first to extract date/time/category/priority, but store content separately
       const parsed = parseInput(val);
       if(!parsed) return;
-      tasks.push(parsed);
+      // Generate semantic title from content (only at creation)
+      const generatedTitle = generateSemanticTitle(parsed.content).slice(0,200);
+      parsed.title = generatedTitle || parsed.title || parsed.content.slice(0,50);
+      // Ensure fields present
+      parsed.id = parsed.id || uid();
+      parsed.createdAt = parsed.createdAt || new Date().toISOString();
+      parsed.expanded = false;
+      tasks.unshift(parsed);
       save();
       input.value = '';
       scheduleNotificationFor(parsed);
+      // If currently in home, stay; if in todo, re-render shows the new item
     }
     
     document.getElementById('todoList').addEventListener('click', handleTodoClick);
@@ -1018,22 +1106,30 @@
         }
       } else if(act === 'edit-task'){
         editTask(tasks[idx]);
-      } else if(act === 'cancel-edit-task'){
-        render();
+      } else if(act === 'expand-task'){
+        tasks[idx].expanded = true;
+        save();
+      } else if(act === 'collapse-task'){
+        tasks[idx].expanded = false;
+        save();
       } else if(act === 'save-edit-task'){
         const titleInput = document.getElementById(`edit-title-${id}`);
+        const contentInput = document.getElementById(`edit-content-${id}`);
         const dateInput = document.getElementById(`edit-date-${id}`);
         const timeInput = document.getElementById(`edit-time-${id}`);
         const categoryInput = document.getElementById(`edit-category-${id}`);
         const priorityInput = document.getElementById(`edit-priority-${id}`);
         
         if(titleInput) tasks[idx].title = titleInput.value.trim() || tasks[idx].title;
+        if(contentInput) tasks[idx].content = contentInput.value.trim() || tasks[idx].content;
         if(dateInput) tasks[idx].date = dateInput.value || null;
         if(timeInput) tasks[idx].time = timeInput.value || null;
-        if(categoryInput) tasks[idx].category = categoryInput.value;
-        if(priorityInput) tasks[idx].priority = priorityInput.value;
+        if(categoryInput) tasks[idx].category = categoryInput.value || null;
+        if(priorityInput) tasks[idx].priority = priorityInput.value || tasks[idx].priority;
         
         save();
+      } else if(act === 'cancel-edit-task'){
+        render();
       }
     }
     
@@ -1045,8 +1141,12 @@
       card.innerHTML = `
         <div class="edit-form">
           <div class="edit-field">
-            <span class="material-icons">edit_note</span>
+            <span class="material-icons">title</span>
             <input type="text" id="edit-title-${t.id}" value="${escapeHtml(t.title)}" placeholder="Titre de la tâche" />
+          </div>
+          <div class="edit-field">
+            <span class="material-icons">notes</span>
+            <textarea id="edit-content-${t.id}" placeholder="Description de la tâche" rows="4">${escapeHtml(t.content)}</textarea>
           </div>
           <div class="edit-field">
             <span class="material-icons">calendar_today</span>
@@ -1093,6 +1193,7 @@
       }, 100);
     }
     
+    /* ---------- Ideas (unchanged logic except title generation on add) ---------- */
     document.getElementById('addIdeaBtn').addEventListener('click', onAddIdea);
     document.getElementById('ideaInput').addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key==='Enter') onAddIdea(); });
     
@@ -1101,11 +1202,11 @@
       const val = input.value.trim();
       if(!val) return;
       
-      const title = generateTitle(val);
+      const title = generateSemanticTitle(val).slice(0,200);
       
       const idea = {
         id: uid(),
-        title: title,
+        title: title || val.slice(0,50),
         content: val,
         category: null,
         createdAt: new Date().toISOString(),
@@ -1257,6 +1358,7 @@
       }, 100);
     }
     
+    /* ---------- Misc controls: clear, import/export, notifications ---------- */
     document.getElementById('clearDone').addEventListener('click', ()=>{ 
       if(confirm('Vider la liste des tâches terminées ?')){ 
         tasks = tasks.filter(t=>!t.done); 
@@ -1278,7 +1380,7 @@
       } 
     });
     
-    document.getElementById('btnExport').addEventListener('click', ()=>{
+    document.getElementById('btnExport').addEventListener('click', ()=>{ 
       const data = JSON.stringify(tasks, null, 2);
       const blob = new Blob([data], {type:'application/json'});
       const url = URL.createObjectURL(blob);
@@ -1299,12 +1401,15 @@
         if(Array.isArray(imported)){
           for(const it of imported){
             it.id = it.id || uid();
+            it.content = it.content || it.raw || it.title || '';
             tasks.push(it);
           }
           save();
           alert('Import réussi: ' + imported.length + ' tâches ajoutées.');
         } else alert('Fichier non reconnu.');
-      } catch(err){ alert('Erreur lors de l\'import: ' + err.message) }
+      } catch(err) {
+          alert(`Erreur lors de l'import : ${err.message}`);
+        }
       fileInput.value = '';
     });
     
@@ -1329,12 +1434,15 @@
         if(Array.isArray(imported)){
           for(const it of imported){
             it.id = it.id || uid();
+            it.content = it.content || it.title || '';
             ideas.push(it);
           }
           save();
           alert('Import réussi: ' + imported.length + ' idées ajoutées.');
         } else alert('Fichier non reconnu.');
-      } catch(err){ alert('Erreur lors de l\'import: ' + err.message) }
+      } catch(err) {
+          alert(`Erreur lors de l'import : ${err.message}`);
+        }
       fileInputIdeas.value = '';
     });
     
