@@ -404,7 +404,6 @@
 </head>
 <body>
   <main class="app" id="app">
-    <!-- HOME SCREEN -->
     <div id="homeScreen" class="screen active">
       <header>
         <div class="brand">
@@ -447,7 +446,6 @@
       </div>
     </div>
     
-    <!-- TODO SCREEN -->
     <div id="todoScreen" class="screen">
       <header>
         <div class="brand">
@@ -500,7 +498,6 @@
       </footer>
     </div>
     
-    <!-- IDEAS SCREEN -->
     <div id="ideasScreen" class="screen">
       <header>
         <div class="brand">
@@ -551,6 +548,8 @@
   <input type="file" id="fileInputIdeas" style="display:none" accept="application/json" />
   
   <script>
+    /* ---------- Début du script complet mis à jour pour la méthode URL Google ---------- */
+
     const STORAGE_TASKS = 'todo_plus_tasks_v1';
     const STORAGE_IDEAS = 'todo_plus_ideas_v1';
     const STORAGE_CATEGORIES = 'todo_plus_categories_v1';
@@ -752,78 +751,211 @@
       let category = 'Personnel';
       for(const m of categories){
         for(const kw of m.k){
-          if(lower.includes(kw)){ category = m.c; break; }
+          if(lower.includes(kw)){
+            category = m.c;
+            break;
+          }
         }
       }
       
       let priority = 'Moyenne';
-      if(lower.includes('urgent') || lower.includes('tout de suite') || lower.includes('immédiat')) priority = 'Haute';
-      if(lower.includes('facultatif') || lower.includes('plus tard')) priority = 'Basse';
+      if(lower.includes('urgent') || lower.includes('maintenant')) {
+        priority = 'Haute';
+        toRemove.push('urgent', 'maintenant');
+      } else if(lower.includes('basse') || lower.includes('faible')) {
+        priority = 'Basse';
+        toRemove.push('basse', 'faible');
+      }
       
       let title = text;
-      toRemove.forEach(phrase => {
-        const regex = new RegExp('\\b' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
-        title = title.replace(regex, ' ');
-      });
-      title = title.replace(/\s+/g, ' ').trim();
-      if(!title) title = text;
+      let content = text;
+      
+      if(date || time || category !== 'Personnel' || priority !== 'Moyenne'){
+        // Remove keywords from the main text to get a cleaner title/content
+        let cleanText = text;
+        
+        // Remove keywords/time/date elements
+        const removeRegex = new RegExp(`\\b(?:${toRemove.filter(Boolean).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+        cleanText = cleanText.replace(removeRegex, ' ').replace(/\s+/g, ' ').trim();
+        
+        // Use the cleaned text for content, and generate a title from it
+        content = cleanText || text;
+        title = generateSemanticTitle(content);
+      } else {
+        title = generateSemanticTitle(text);
+      }
       
       return {
         id: uid(),
         title: title,
-        raw: text,
-        content: text,
+        content: text, // Keep the full original text as content
         date: date,
         time: time,
-        category,
-        priority,
+        category: category,
+        priority: priority,
         done: false,
-        createdAt: new Date().toISOString(),
-        expanded: false
+        createdAt: new Date().toISOString()
       };
     }
+
+    // ----------------------------------------------------------------------
+// FONCTION D'EXPORT VERS LIEN GOOGLE CALENDAR (OUVRE LE FORMULAIRE DE CRÉATION)
+// Version optimisée pour la robustesse des dates.
+// ----------------------------------------------------------------------
+function exportTaskToGoogleCreationLink(task) {
+    if (!task.title || !task.date) {
+        alert("Impossible de créer le lien : La tâche doit avoir un titre et une date.");
+        return;
+    }
+
+    // 1. ANALYSE SÉCURISÉE de la date (task.date est au format 'AAAA-MM-JJ')
+    // Extraction des composants numériques de la date (mois est 1-basé)
+    const [year, month, day] = task.date.split('-').map(Number);
     
-    /* --- Title generator: semantic, up to 7 words --- */
-    function generateSemanticTitle(content) {
-      if(!content) return '';
-      // Normalize
-      let text = String(content).replace(/\s+/g,' ').trim();
-      // Remove excessive punctuation
-      text = text.replace(/[\r\n]+/g, '. ').replace(/[«»"()]/g, '').trim();
-      // Split sentences to prefer main sentence
-      const sentences = text.split(/[.?!]/).map(s=>s.trim()).filter(Boolean);
-      let main = sentences.length ? sentences[0] : text;
-      // Tokenize words, remove stopwords
-      const stopwords = new Set([
-        'de','la','le','les','des','du','un','une','et','à','a','pour','par','en','sur','avec','sans','au','aux',
-        'que','qui','se','ce','ces','son','sa','sont','dans','est','ne','pas','plus','ou','mais','mon','ma','mes',
-        'ta','ton','tes','vos','votre','il','elle','on','nous','vous','entre','avant','après','apres','aujourd','demain','hier'
-      ]);
-      const words = main.split(/\s+/).map(w => w.replace(/[^\wÀ-ÿ-]/g,'')).filter(Boolean);
-      // Build candidate by keeping non-stopwords, otherwise keep some small words to keep meaning
-      const important = [];
-      for(const w of words){
-        const lw = w.toLowerCase();
-        if(!stopwords.has(lw)) important.push(w);
-      }
-      // If no important words, fall back to the first words original
-      let chosen = important.length ? important.slice(0,7) : words.slice(0,7);
-      // If chosen too short but original sentence long, try to merge with next sentence words
-      if(chosen.length < 3 && sentences.length > 1) {
-        const nextWords = sentences.slice(1).join(' ').split(/\s+/).map(w=>w.replace(/[^\wÀ-ÿ-]/g,'')).filter(Boolean);
-        chosen = (important.concat(nextWords)).slice(0,7);
-      }
-      // Reconstruct title preserving original word casing when possible
-      let title = chosen.join(' ');
-      // Post cleanup: capitalize first letter
-      title = title.replace(/\s+/g,' ').trim();
-      if(!title) {
-        title = words.slice(0,7).join(' ');
-      }
-      title = title.charAt(0).toUpperCase() + title.slice(1);
-      return title;
+    // Utilitaire pour formater en YYYYMMDD
+    const formatGoogleDate = (y, m, d) => {
+        return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
+    };
+
+    let start, end;
+    const isAllDay = !task.time;
+    
+    if (isAllDay) {
+        // --- Événement Toute la Journée (Format: YYYYMMDD/YYYYMMDD+1) ---
+        
+        // Date de début (la plus sûre : simple remplacement de la chaîne YYYY-MM-JJ)
+        start = task.date.replace(/-/g, ''); 
+
+        // Calcul de la date de fin (J+1) pour l'événement 'All Day'
+        // Nous utilisons l'objet Date pour gérer les sauts de mois/année de manière fiable.
+        // 'month - 1' car le constructeur de Date JS attend le mois 0-basé (0 pour janvier)
+        const startDateObj = new Date(year, month - 1, day); 
+        const endDateObj = new Date(startDateObj);
+        endDateObj.setDate(endDateObj.getDate() + 1); // Ajout d'un jour
+
+        const endYear = endDateObj.getFullYear();
+        const endMonth = endDateObj.getMonth() + 1; // Reconversion en 1-basé
+        const endDay = endDateObj.getDate();
+        end = formatGoogleDate(endYear, endMonth, endDay);
+        
+    } else {
+        // --- Événement Horodaté (Format: YYYYMMDDThhmmss/YYYYMMDDThhmmss+1h) ---
+        
+        const [hours, minutes] = task.time.split(':').map(Number);
+        
+        // Création de l'objet Date en heure locale (mois 0-basé)
+        let startDate = new Date(year, month - 1, day, hours, minutes, 0); 
+        
+        // Date de fin: 1 heure plus tard
+        let endDate = new Date(startDate);
+        endDate.setHours(endDate.getHours() + 1);
+
+        // Utilitaire pour formater Date object en YYYYMMDDThhmmss
+        // Utilisation de .get...() qui renvoie les valeurs en heure LOCALE
+        const formatDateTime = (d) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dt = String(d.getDate()).padStart(2, '0');
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            return `${y}${m}${dt}T${h}${min}${s}`;
+        };
+
+        start = formatDateTime(startDate);
+        end = formatDateTime(endDate);
     }
     
+    const description = `Contenu:\n${task.content}\n\nCatégorie: ${task.category || 'Personnel'}\nPriorité: ${task.priority || 'Moyenne'}`;
+
+    // 2. Construction de l'URL Google Calendar
+    const url = new URL('https://calendar.google.com/calendar/render');
+    url.searchParams.append('action', 'TEMPLATE'); 
+    url.searchParams.append('text', `ToDo+: ${task.title}`);
+    url.searchParams.append('dates', `${start}/${end}`);
+    url.searchParams.append('details', description);
+    // CRUCIAL: Fournir le fuseau horaire de l'utilisateur pour l'interprétation des heures locales.
+    url.searchParams.append('ctz', Intl.DateTimeFormat().resolvedOptions().timeZone); 
+
+    // 3. Ouverture du lien dans un nouvel onglet
+    window.open(url.toString(), '_blank');
+}
+    
+    /* --- Title generator: Semantic, Keyword-based (up to 10 words) --- */
+    function generateSemanticTitle(content) {
+      if (!content) return '';
+      // 1. Normalize and split into sentences
+      let text = String(content).replace(/\s+/g, ' ').trim(); // Remove excessive punctuation and standardize line breaks to period
+      text = text.replace(/[\r\n]+/g, '. ').replace(/[«»"()]/g, '').trim();
+      const sentences = text.split(/[.?!]/).map(s => s.trim()).filter(Boolean);
+      let mainSentence = sentences.length ? sentences[0] : text;
+      
+      // 2. Comprehensive French Stopwords List (expanded for better filtering)
+      const stopwords = new Set([
+        // Articles/Determinants
+        'un', 'une', 'des', 'le', 'la', 'les', 'du', 'de', 'd', 'l', 'ce', 'cet', 'cette', 'ces', 'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'notre', 'nos', 'votre', 'vos', 'leur', 'leurs', 'aucun', 'aucune', 'certains', 'certaines', 'chaque', 'maint', 'mainte', 'nul', 'nulle', 'plusieurs', 'quelques', 'tel', 'telle', 'tels', 'telles', 'tout', 'toute', 'tous', 'toutes', 'même', 'mêmes', 'quel', 'quelle', 'quels', 'quelles',
+        // Pronouns
+        'je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles', 'me', 'te', 'se', 'moi', 'toi', 'soi', 'y', 'en', 'celui', 'ceux', 'celle', 'celles', 'ceci', 'cela', 'ça', 'qui', 'que', 'quoi', 'dont', 'où', 'lequel', 'laquelle', 'lesquels', 'lesquelles', 'auquel', 'auxquels', 'à laquelle', 'auxquelles',
+        // Adverbs/Prepositions/Conjunctions
+        'à', 'a', 'au', 'aux', 'avec', 'contre', 'dans', 'de', 'derrière', 'dès', 'devant', 'durant', 'en', 'entre', 'malgré', 'par', 'parmi', 'pendant', 'pour', 'près', 'sans', 'sous', 'sur', 'vers', 'avant', 'après', 'bien', 'encore', 'ici', 'là', 'maintenant', 'jamais', 'souvent', 'toujours', 'très', 'aussi', 'comme', 'donc', 'car', 'ni', 'or', 'puis', 'quand', 'si', 'afin', 'alors', 'ainsi', 'cependant', 'lorsque', 'pourtant', 'quoique', 'soit', 'voici', 'voilà',
+        // Verbs (common forms)
+        'être', 'avoir', 'faire', 'dire', 'pouvoir', 'vouloir', 'aller', 'voir', 'savoir', 'falloir', 'valoir', 'venir', 'prendre', 'donner', 'trouver', 'parler', 'mettre', 'passer', 'devoir', 'sembler', 'laisser', 'arriver', 'suivre', 'recevoir', 'répondre', 'appeler', 'vivre', 'croire', 'tenir', 'rester', 'commencer', 'aider', 'écrire', 'se', 'est', 'ai', 'as', 'ont', 'sommes', 'êtes', 'sont', 'avait', 'faisait',
+        // Numerals
+        'zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'premier', 'première', 'deuxième',
+        // Other common fillers/small words
+        'chose', 'truc', 'quelque', 'ici', 'là', 'juste', 'petit', 'grande', 'faire', 'etc', 'moi', 'toi', 'il', 'elle', 'nous', 'vous', 'ils', 'elles', 'ça', 'ceci', 'cela'
+      ]);
+      
+      // 3. Keyword Extraction (for long texts)
+      const allWords = text.split(/\s+/)
+        .map(w => w.replace(/[^\wÀ-ÿ-]/g, '').toLowerCase())
+        .filter(w => w.length > 2 && !stopwords.has(w));
+
+      const frequency = {};
+      allWords.forEach(word => {
+        frequency[word] = (frequency[word] || 0) + 1;
+      });
+
+      // Sort keywords by frequency (highest first)
+      const sortedKeywords = Object.keys(frequency).sort((a, b) => frequency[b] - frequency[a]);
+
+      // 4. Construct Title: Use the first sentence but filter heavily based on keywords
+      const mainWords = mainSentence.split(/\s+/)
+        .map(w => w.replace(/[^\wÀ-ÿ-]/g, ''))
+        .filter(Boolean);
+
+      let titleWords = [];
+      const MAX_LENGTH = 10;
+      
+      // Keep words from the first sentence that are either stop-words (for flow) or important keywords
+      for (const w of mainWords) {
+        if (titleWords.length >= MAX_LENGTH) break;
+        const lw = w.toLowerCase();
+        
+        // Critère d'inclusion : un mot est gardé s'il est un mot vide (pour la grammaire) 
+        // OU s'il est un mot clé important (présent dans les 5 premiers mots les plus fréquents du texte entier, ou si sa fréquence est > 1)
+        if (stopwords.has(lw) || frequency[lw] > 1 || sortedKeywords.slice(0, 5).includes(lw)) {
+          titleWords.push(w);
+        }
+      }
+
+      // Final clean up and capitalization
+      let title = titleWords.join(' ').replace(/\s+/g, ' ').trim();
+      
+      if (title.length > 0) {
+        // Remove trailing punctuation
+        title = title.replace(/[,\-\s]+$/, '');
+        // Capitalize first letter
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+      } else {
+        // Ultimate fallback to first 5 words of content
+        const fallbackWords = content.split(/\s+/).slice(0, 5).join(' ');
+        title = fallbackWords.charAt(0).toUpperCase() + fallbackWords.slice(1);
+      }
+      
+      return title;
+    }
+
     function render(){
       if(currentScreen === 'home'){
         renderHomePreviews();
@@ -837,7 +969,6 @@
     function renderHomePreviews(){
       const todoPreview = document.getElementById('todoPreview');
       const ideasPreview = document.getElementById('ideasPreview');
-      
       const pending = tasks.filter(t=>!t.done).slice(0, 5);
       const recentIdeas = ideas.slice(0, 3);
       
@@ -852,7 +983,7 @@
           card.innerHTML = `
             <div class="preview-card-content">
               <div class="preview-card-title">${escapeHtml(t.title)}</div>
-              <div class="preview-card-meta">${t.date ? formatDateFrench(t.date) : 'Sans date'} • ${t.category}</div>
+              <div class="preview-card-meta">${t.date ? formatDateFrench(t.date) : 'Sans date'}${t.time ? ' à ' + t.time : ''} • ${t.category}</div>
             </div>
           `;
           todoPreview.appendChild(card);
@@ -860,10 +991,11 @@
       }
       
       if(recentIdeas.length === 0){
-        ideasPreview.innerHTML = '<div class="preview-card"><div class="preview-card-content"><div class="preview-card-meta" style="text-align:center">Aucune idée enregistrée</div></div></div>';
+        ideasPreview.innerHTML = '<div class="preview-card"><div class="preview-card-content"><div class="preview-card-meta" style="text-align:center">Aucune idée récente</div></div></div>';
       } else {
         ideasPreview.innerHTML = '';
         recentIdeas.forEach(idea => {
+          const allCategories = ['Personnel', 'Travail', 'Créatif', 'Projet', 'Inspiration', ...customCategories];
           const card = document.createElement('div');
           card.className = 'preview-card';
           card.onclick = () => showScreen('ideas');
@@ -883,9 +1015,9 @@
       const doneList = document.getElementById('doneList');
       const countPending = document.getElementById('countPending');
       const countDone = document.getElementById('countDone');
-      
       todoList.innerHTML = '';
       doneList.innerHTML = '';
+      
       const pending = tasks.filter(t=>!t.done);
       const done = tasks.filter(t=>t.done);
       
@@ -935,6 +1067,7 @@
             <div class="actions">
               <button class="icon-btn" data-action="collapse-task" title="Réduire"><span class="material-icons">expand_less</span></button>
               <button class="icon-btn" data-action="edit-task" title="Modifier"><span class="material-icons">edit</span></button>
+              <button class="icon-btn" data-action="export-ics" title="Ajouter à Google Agenda (Ouvre un formulaire)"><span class="material-icons">event</span></button>
               <button class="icon-btn" data-action="delete-task" title="Supprimer"><span class="material-icons">delete</span></button>
             </div>
           </div>
@@ -954,12 +1087,14 @@
                   ${timeChip}
                   ${categoryChip}
                   ${priorityChip}
+                  ${contentPreview ? `<span style="font-style:italic">...${escapeHtml(contentPreview).substring(0, 50)}</span>` : ''}
                 </div>
               </div>
             </div>
             <div class="actions">
               <button class="icon-btn" data-action="expand-task" title="Consulter"><span class="material-icons">expand_more</span></button>
               <button class="icon-btn" data-action="edit-task" title="Modifier"><span class="material-icons">edit</span></button>
+              <button class="icon-btn" data-action="export-ics" title="Ajouter à Google Agenda (Ouvre un formulaire)"><span class="material-icons">event</span></button>
               <button class="icon-btn" data-action="delete-task" title="Supprimer"><span class="material-icons">delete</span></button>
             </div>
           </div>
@@ -971,27 +1106,24 @@
     function renderIdeasScreen(){
       const ideasList = document.getElementById('ideasList');
       const countIdeas = document.getElementById('countIdeas');
-      
       ideasList.innerHTML = '';
-      countIdeas.textContent = ideas.length;
-      
-      ideas.forEach(idea => ideasList.appendChild(renderIdeaCard(idea)));
-    }
-    
-    function renderIdeaCard(idea){
-      const card = document.createElement('div');
-      card.className = 'card';
-      if(!idea.category) {
-        card.classList.add('uncategorized');
-      } else {
-        card.classList.add('categorized');
-      }
-      card.dataset.id = idea.id;
       
       const allCategories = ['Personnel', 'Travail', 'Créatif', 'Projet', 'Inspiration', ...customCategories];
+      const uniqueCategories = [...new Set(allCategories)];
+      
+      ideas.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+      
+      ideas.forEach(idea => ideasList.appendChild(renderIdeaCard(idea, uniqueCategories)));
+      countIdeas.textContent = ideas.length;
+    }
+    
+    function renderIdeaCard(idea, allCategories){
+      const card = document.createElement('div');
+      card.className = 'card';
+      if(idea.expanded) card.classList.add('expanded');
+      card.dataset.id = idea.id;
       
       if(idea.expanded){
-        card.classList.add('expanded');
         card.innerHTML = `
           <div class="row">
             <div class="task-left">
@@ -999,14 +1131,11 @@
                 <p class="task-title">${escapeHtml(idea.title)}</p>
                 <div class="meta">
                   <span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">calendar_today</span>&nbsp;${formatDateFrench(idea.createdAt.slice(0,10))}</span>
-                  ${idea.category ? 
-                    `<span class="chip categorized">${escapeHtml(idea.category)}</span>` : 
-                    `<select class="category-select" data-action="quick-categorize">
-                      <option value="">⚠️ À classer</option>
-                      ${allCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
-                      <option value="__new__">➕ Nouvelle catégorie...</option>
-                    </select>`
-                  }
+                  ${idea.category ? `<span class="chip categorized">${escapeHtml(idea.category)}</span>` : `<select class="category-select" data-action="quick-categorize">
+                    <option value="">⚠️ À classer</option>
+                    ${allCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
+                    <option value="__new__">➕ Nouvelle catégorie...</option>
+                  </select>` }
                 </div>
               </div>
             </div>
@@ -1026,14 +1155,11 @@
                 <p class="task-title">${escapeHtml(idea.title)}</p>
                 <div class="meta">
                   <span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">calendar_today</span>&nbsp;${formatDateFrench(idea.createdAt.slice(0,10))}</span>
-                  ${idea.category ? 
-                    `<span class="chip categorized">${escapeHtml(idea.category)}</span>` : 
-                    `<select class="category-select" data-action="quick-categorize">
-                      <option value="">⚠️ À classer</option>
-                      ${allCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
-                      <option value="__new__">➕ Nouvelle catégorie...</option>
-                    </select>`
-                  }
+                  ${idea.category ? `<span class="chip categorized">${escapeHtml(idea.category)}</span>` : `<select class="category-select" data-action="quick-categorize">
+                    <option value="">⚠️ À classer</option>
+                    ${allCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
+                    <option value="__new__">➕ Nouvelle catégorie...</option>
+                  </select>` }
                 </div>
               </div>
             </div>
@@ -1052,35 +1178,35 @@
       try{
         const d = new Date(iso);
         return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
-      }catch(e){ return iso; }
+      }catch(e){
+        return iso;
+      }
     }
     
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
     
     /* ---------- EVENTS and Handlers ---------- */
+    
     document.getElementById('addBtn').addEventListener('click', onAddTask);
-    document.getElementById('taskInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddTask(); });
-    // single-line Enter would be inconvenient for textarea; use Ctrl+Enter or Shift+Enter to add
+    document.getElementById('taskInput').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddTask();
+    }); // single-line Enter would be inconvenient for textarea; use Ctrl+Enter or Shift+Enter to add
     
     function onAddTask(){
       const input = document.getElementById('taskInput');
       const val = input.value.trim();
       if(!val) return;
-      // parse first to extract date/time/category/priority, but store content separately
+      
+      // parse first to extract date/time/category/priority/title
       const parsed = parseInput(val);
-      if(!parsed) return;
-      // Generate semantic title from content (only at creation)
-      const generatedTitle = generateSemanticTitle(parsed.content).slice(0,200);
-      parsed.title = generatedTitle || parsed.title || parsed.content.slice(0,50);
-      // Ensure fields present
-      parsed.id = parsed.id || uid();
-      parsed.createdAt = parsed.createdAt || new Date().toISOString();
-      parsed.expanded = false;
-      tasks.unshift(parsed);
-      save();
-      input.value = '';
-      scheduleNotificationFor(parsed);
-      // If currently in home, stay; if in todo, re-render shows the new item
+      if(parsed){
+        tasks.push(parsed);
+        save();
+        input.value = '';
+        input.rows = 2; // Reset rows
+      }
     }
     
     document.getElementById('todoList').addEventListener('click', handleTodoClick);
@@ -1089,21 +1215,29 @@
     function handleTodoClick(e){
       const action = e.target.closest('[data-action]');
       if(!action) return;
+      
       const act = action.dataset.action;
       const card = e.target.closest('.card');
       if(!card) return;
+      
       const id = card.dataset.id;
       const idx = tasks.findIndex(x=>x.id===id);
+      
       if(idx === -1) return;
       
       if(act === 'toggle'){
         tasks[idx].done = !tasks[idx].done;
+        tasks[idx].doneAt = tasks[idx].done ? new Date().toISOString() : null;
         save();
+        scheduleAllNotifications(); // Reschedule to remove the done task's notification
       } else if(act === 'delete-task'){
         if(confirm('Supprimer définitivement cette tâche ?')) {
           tasks.splice(idx,1);
           save();
+          scheduleAllNotifications();
         }
+      } else if(act === 'export-ics'){ // **MODIFIÉ** : Appel de la fonction d'export Google URL
+        exportTaskToGoogleCreationLink(tasks[idx]);
       } else if(act === 'edit-task'){
         editTask(tasks[idx]);
       } else if(act === 'expand-task'){
@@ -1119,7 +1253,7 @@
         const timeInput = document.getElementById(`edit-time-${id}`);
         const categoryInput = document.getElementById(`edit-category-${id}`);
         const priorityInput = document.getElementById(`edit-priority-${id}`);
-        
+
         if(titleInput) tasks[idx].title = titleInput.value.trim() || tasks[idx].title;
         if(contentInput) tasks[idx].content = contentInput.value.trim() || tasks[idx].content;
         if(dateInput) tasks[idx].date = dateInput.value || null;
@@ -1127,7 +1261,13 @@
         if(categoryInput) tasks[idx].category = categoryInput.value || null;
         if(priorityInput) tasks[idx].priority = priorityInput.value || tasks[idx].priority;
         
+        // Recalculate title if content changed and title is empty
+        if((contentInput && contentInput.value.trim() !== tasks[idx].content) || titleInput.value.trim() === '') {
+            tasks[idx].title = generateSemanticTitle(tasks[idx].content);
+        }
+
         save();
+        scheduleAllNotifications(); // Reschedule if date/time changed
       } else if(act === 'cancel-edit-task'){
         render();
       }
@@ -1136,7 +1276,6 @@
     function editTask(t){
       const card = document.querySelector(`.card[data-id="${t.id}"]`);
       if(!card) return;
-      
       card.classList.add('editing');
       card.innerHTML = `
         <div class="edit-form">
@@ -1176,89 +1315,86 @@
           </div>
           <div class="edit-actions">
             <button class="btn-cancel" data-action="cancel-edit-task">
-              <span class="material-icons" style="font-size:16px">close</span>
-              Annuler
+              <span class="material-icons" style="font-size:16px">close</span> Annuler
             </button>
             <button class="btn-save" data-action="save-edit-task">
-              <span class="material-icons" style="font-size:16px">check</span>
-              Valider
+              <span class="material-icons" style="font-size:16px">save</span> Enregistrer
             </button>
           </div>
         </div>
       `;
-      
-      setTimeout(() => {
-        const titleInput = document.getElementById(`edit-title-${t.id}`);
-        if(titleInput) titleInput.focus();
-      }, 100);
     }
     
-    /* ---------- Ideas (unchanged logic except title generation on add) ---------- */
     document.getElementById('addIdeaBtn').addEventListener('click', onAddIdea);
-    document.getElementById('ideaInput').addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key==='Enter') onAddIdea(); });
+    document.getElementById('ideaInput').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddIdea();
+    });
     
     function onAddIdea(){
       const input = document.getElementById('ideaInput');
       const val = input.value.trim();
       if(!val) return;
       
-      const title = generateSemanticTitle(val).slice(0,200);
-      
-      const idea = {
+      const title = generateSemanticTitle(val);
+      ideas.unshift({
         id: uid(),
-        title: title || val.slice(0,50),
+        title: title,
         content: val,
         category: null,
-        createdAt: new Date().toISOString(),
-        expanded: false
-      };
-      
-      ideas.unshift(idea);
+        createdAt: new Date().toISOString()
+      });
       save();
       input.value = '';
+      input.rows = 2; // Reset rows
     }
     
-    document.getElementById('ideasList').addEventListener('click', handleIdeasClick);
-    document.getElementById('ideasList').addEventListener('change', handleIdeasChange);
+    document.getElementById('ideasList').addEventListener('click', (e)=>{
+      const action = e.target.closest('[data-action]');
+      if(action && action.dataset.action === 'quick-categorize'){
+        handleQuickCategorize(e);
+      } else {
+        handleIdeasClick(e);
+      }
+    });
     
-    function handleIdeasChange(e){
-      if(e.target.matches('[data-action="quick-categorize"]')){
-        const select = e.target;
-        const card = select.closest('.card');
-        if(!card) return;
-        const id = card.dataset.id;
-        const idx = ideas.findIndex(x=>x.id===id);
-        if(idx === -1) return;
-        
-        const value = select.value;
-        
-        if(value === '__new__'){
-          const newCat = prompt('Entrez le nom de la nouvelle catégorie :');
-          if(newCat && newCat.trim()){
-            const trimmedCat = newCat.trim();
-            if(!customCategories.includes(trimmedCat)){
-              customCategories.push(trimmedCat);
-            }
-            ideas[idx].category = trimmedCat;
-            save();
-          } else {
-            select.value = '';
+    function handleQuickCategorize(e){
+      const select = e.target;
+      const value = select.value;
+      const card = select.closest('.card');
+      if(!card) return;
+      
+      const id = card.dataset.id;
+      const idx = ideas.findIndex(x=>x.id===id);
+      if(idx === -1) return;
+      
+      if(value === '__new__'){
+        const newCat = prompt('Nom de la nouvelle catégorie :');
+        if(newCat && newCat.trim()){
+          ideas[idx].category = newCat.trim();
+          if(!customCategories.includes(newCat.trim())){
+            customCategories.push(newCat.trim());
           }
-        } else if(value){
-          ideas[idx].category = value;
           save();
+        } else {
+          select.value = '';
         }
+      } else if(value){
+        ideas[idx].category = value;
+        save();
       }
     }
     
     function handleIdeasClick(e){
       const action = e.target.closest('[data-action]');
       if(!action) return;
+      
       const act = action.dataset.action;
       const card = e.target.closest('.card');
       if(!card) return;
+      
       const id = card.dataset.id;
       const idx = ideas.findIndex(x=>x.id===id);
+      
       if(idx === -1) return;
       
       if(act === 'expand'){
@@ -1280,11 +1416,16 @@
         const titleInput = document.getElementById(`edit-idea-title-${id}`);
         const contentInput = document.getElementById(`edit-idea-content-${id}`);
         const categoryInput = document.getElementById(`edit-idea-category-${id}`);
-        
+
         if(titleInput) ideas[idx].title = titleInput.value.trim() || ideas[idx].title;
         if(contentInput) ideas[idx].content = contentInput.value.trim() || ideas[idx].content;
         if(categoryInput) ideas[idx].category = categoryInput.value || null;
         
+        // Recalculate title if content changed and title is empty
+        if((contentInput && contentInput.value.trim() !== ideas[idx].content) || titleInput.value.trim() === '') {
+            ideas[idx].title = generateSemanticTitle(ideas[idx].content);
+        }
+
         save();
       }
     }
@@ -1292,9 +1433,9 @@
     function editIdea(idea){
       const card = document.querySelector(`.card[data-id="${idea.id}"]`);
       if(!card) return;
-      
       const allCategories = ['Personnel', 'Travail', 'Créatif', 'Projet', 'Inspiration', ...customCategories];
-      
+      const uniqueCategories = [...new Set(allCategories)]; // remove duplicates from custom categories
+
       card.classList.add('editing');
       card.innerHTML = `
         <div class="edit-form">
@@ -1310,83 +1451,56 @@
             <span class="material-icons">label</span>
             <select id="edit-idea-category-${idea.id}">
               <option value="">À classer</option>
-              ${allCategories.map(cat => 
-                `<option value="${escapeHtml(cat)}" ${idea.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`
-              ).join('')}
+              ${uniqueCategories.map(cat => `<option value="${escapeHtml(cat)}" ${idea.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>` ).join('')}
               <option value="__new__">➕ Nouvelle catégorie...</option>
             </select>
           </div>
           <div class="edit-actions">
             <button class="btn-cancel" data-action="cancel-edit-idea">
-              <span class="material-icons" style="font-size:16px">close</span>
-              Annuler
+              <span class="material-icons" style="font-size:16px">close</span> Annuler
             </button>
             <button class="btn-save" data-action="save-edit-idea">
-              <span class="material-icons" style="font-size:16px">check</span>
-              Valider
+              <span class="material-icons" style="font-size:16px">save</span> Enregistrer
             </button>
           </div>
         </div>
       `;
-      
-      setTimeout(() => {
-        const titleInput = document.getElementById(`edit-idea-title-${idea.id}`);
-        if(titleInput) titleInput.focus();
-        
-        const categorySelect = document.getElementById(`edit-idea-category-${idea.id}`);
-        if(categorySelect){
-          categorySelect.addEventListener('change', (e) => {
-            if(e.target.value === '__new__'){
-              const newCat = prompt('Entrez le nom de la nouvelle catégorie :');
-              if(newCat && newCat.trim()){
-                const trimmedCat = newCat.trim();
-                if(!customCategories.includes(trimmedCat)){
-                  customCategories.push(trimmedCat);
-                  localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(customCategories));
-                }
-                const newOption = document.createElement('option');
-                newOption.value = trimmedCat;
-                newOption.textContent = trimmedCat;
-                newOption.selected = true;
-                categorySelect.insertBefore(newOption, categorySelect.lastElementChild);
-              } else {
-                e.target.value = idea.category || '';
-              }
-            }
-          });
-        }
-      }, 100);
     }
     
-    /* ---------- Misc controls: clear, import/export, notifications ---------- */
-    document.getElementById('clearDone').addEventListener('click', ()=>{ 
-      if(confirm('Vider la liste des tâches terminées ?')){ 
-        tasks = tasks.filter(t=>!t.done); 
-        save(); 
-      } 
+    // --- Clear & Export/Import ---
+    document.getElementById('clearDone').addEventListener('click', ()=>{
+      if(confirm('Supprimer toutes les tâches terminées ?')){
+        tasks = tasks.filter(t=>!t.done);
+        save();
+      }
     });
     
-    document.getElementById('clearAll').addEventListener('click', ()=>{ 
-      if(confirm('Supprimer toutes les tâches ?')){ 
-        tasks = []; 
-        save(); 
-      } 
+    document.getElementById('clearAll').addEventListener('click', ()=>{
+      if(confirm('Supprimer TOUTES les tâches ?')){
+        tasks = [];
+        save();
+        scheduleAllNotifications();
+      }
     });
     
-    document.getElementById('clearAllIdeas').addEventListener('click', ()=>{ 
-      if(confirm('Supprimer toutes les idées ?')){ 
-        ideas = []; 
-        save(); 
-      } 
+    document.getElementById('clearAllIdeas').addEventListener('click', ()=>{
+      if(confirm('Supprimer TOUTES les idées ?')){
+        ideas = [];
+        save();
+      }
     });
     
-    document.getElementById('btnExport').addEventListener('click', ()=>{ 
+    // Export/Import Tâches (JSON)
+    document.getElementById('btnExport').addEventListener('click', ()=>{
       const data = JSON.stringify(tasks, null, 2);
       const blob = new Blob([data], {type:'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'todo_export.json';
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = url;
+      a.download = 'todo_export.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       URL.revokeObjectURL(url);
     });
     
@@ -1408,18 +1522,22 @@
           alert('Import réussi: ' + imported.length + ' tâches ajoutées.');
         } else alert('Fichier non reconnu.');
       } catch(err) {
-          alert(`Erreur lors de l'import : ${err.message}`);
-        }
+        alert(`Erreur lors de l'import : ${err.message}`);
+      }
       fileInput.value = '';
     });
     
+    // Export/Import Idées (JSON)
     document.getElementById('btnExportIdeas').addEventListener('click', ()=>{
       const data = JSON.stringify(ideas, null, 2);
       const blob = new Blob([data], {type:'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'ideas_export.json';
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = url;
+      a.download = 'ideas_export.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       URL.revokeObjectURL(url);
     });
     
@@ -1441,11 +1559,12 @@
           alert('Import réussi: ' + imported.length + ' idées ajoutées.');
         } else alert('Fichier non reconnu.');
       } catch(err) {
-          alert(`Erreur lors de l'import : ${err.message}`);
-        }
+        alert(`Erreur lors de l'import : ${err.message}`);
+      }
       fileInputIdeas.value = '';
     });
     
+    // --- Notifications (Speech Recognition) ---
     const btnNotif = document.getElementById('btnNotif');
     btnNotif.addEventListener('click', async ()=>{
       if(!("Notification" in window)){
@@ -1453,55 +1572,61 @@
         return;
       }
       if(Notification.permission === 'granted'){
-        alert('Notifications déjà autorisées.');
+        alert('Notifications déjà activées. La planification est relancée.');
+        scheduleAllNotifications();
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if(permission === 'granted'){
+        alert('Notifications activées !');
+        scheduleAllNotifications();
       } else {
-        const p = await Notification.requestPermission();
-        if(p === 'granted') alert('Notifications autorisées !');
-        else alert('Permission non accordée.');
+        alert('Permission refusée.');
       }
     });
     
     let recognition = null;
     let isRecording = false;
     
-    if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRecognition();
       recognition.lang = 'fr-FR';
-      recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
       
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        if(currentScreen === 'todo'){
-          document.getElementById('taskInput').value = transcript;
-          document.getElementById('taskInput').focus();
-        } else if(currentScreen === 'ideas'){
-          document.getElementById('ideaInput').value = transcript;
-          document.getElementById('ideaInput').focus();
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Erreur reconnaissance vocale:', event.error);
-        if(event.error === 'no-speech'){
-          alert('Aucune parole détectée.');
-        } else if(event.error === 'not-allowed'){
-          alert('Permission micro refusée.');
+        const currentInput = (currentScreen === 'todo' ? document.getElementById('taskInput') : document.getElementById('ideaInput'));
+        if(currentInput){
+          currentInput.value = transcript;
+          currentInput.rows = Math.max(2, Math.ceil(transcript.split('\n').length * 1.5));
         }
         stopRecording();
       };
       
-      recognition.onend = () => { stopRecording(); };
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        stopRecording();
+      };
+      
+      recognition.onend = () => {
+        stopRecording();
+      };
+    } else {
+      console.warn('Speech Recognition not supported in this browser.');
+      // Disable mic buttons if not supported
+      if(document.getElementById('micBtnTodo')) document.getElementById('micBtnTodo').style.display = 'none';
+      if(document.getElementById('micBtnIdea')) document.getElementById('micBtnIdea').style.display = 'none';
     }
     
     function startRecording(){
-      if(!recognition){
-        alert('Reconnaissance vocale non supportée.');
+      if(!recognition) {
+        alert('Reconnaissance vocale non supportée par ce navigateur.');
         return;
       }
       isRecording = true;
-      const btn = currentScreen === 'todo' ? document.getElementById('micBtnTodo') : document.getElementById('micBtnIdea');
+      const btn = (currentScreen === 'todo' ? document.getElementById('micBtnTodo') : document.getElementById('micBtnIdea'));
       btn.classList.add('recording');
       try {
         recognition.start();
@@ -1518,27 +1643,34 @@
       if(btnIdea) btnIdea.classList.remove('recording');
     }
     
-    document.getElementById('micBtnTodo').addEventListener('click', () => {
-      if(isRecording) recognition.stop();
-      else startRecording();
-    });
-    
-    document.getElementById('micBtnIdea').addEventListener('click', () => {
-      if(isRecording) recognition.stop();
-      else startRecording();
-    });
+    if (recognition) {
+        document.getElementById('micBtnTodo').addEventListener('click', () => {
+            if(isRecording) recognition.stop();
+            else startRecording();
+        });
+        document.getElementById('micBtnIdea').addEventListener('click', () => {
+            if(isRecording) recognition.stop();
+            else startRecording();
+        });
+    }
     
     let scheduledTimers = [];
-    function clearTimers(){ scheduledTimers.forEach(id=>clearTimeout(id)); scheduledTimers = []; }
+    
+    function clearTimers(){
+      scheduledTimers.forEach(id=>clearTimeout(id));
+      scheduledTimers = [];
+    }
     
     function scheduleAllNotifications(){
       clearTimers();
       if(Notification.permission !== 'granted') return;
       const now = Date.now();
+      
       for(const t of tasks){
         if(t.done) continue;
         if(t.date){
           let ts = new Date(t.date + 'T00:00:00').getTime();
+          
           if(t.time){
             const parts = t.time.split(':').map(x=>parseInt(x,10));
             if(parts.length>=2){
@@ -1547,12 +1679,15 @@
               ts = d.getTime();
             }
           } else {
+            // All-day task, notify at 9am on that day
             const d = new Date(t.date); d.setHours(9,0,0,0); ts = d.getTime();
           }
+          
           const delay = ts - now;
+          // Schedule if the notification is in the future but not more than 7 days away
           if(delay > 0 && delay < 1000 * 60 * 60 * 24 * 7){
             const id = setTimeout(()=>{
-              new Notification('ToDo+: ' + t.title, { body: `${t.date}${t.time ? ' ' + t.time : ''} — ${t.category}` });
+              new Notification('ToDo+: ' + t.title, { body: `${formatDateFrench(t.date)}${t.time ? ' ' + t.time : ''} — ${t.category}` });
             }, delay);
             scheduledTimers.push(id);
           }
@@ -1560,18 +1695,10 @@
       }
     }
     
-    function scheduleNotificationFor(task){
-      scheduleAllNotifications();
-    }
-    
     load();
     render();
     scheduleAllNotifications();
-    
-    document.addEventListener('visibilitychange', ()=> {
-      if(document.visibilityState === 'visible') scheduleAllNotifications();
-      else clearTimers();
-    });
+/* ---------- Fin du script complet mis à jour ---------- */
   </script>
 </body>
 </html>
