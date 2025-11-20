@@ -406,15 +406,16 @@
   <main class="app" id="app">
     <div id="homeScreen" class="screen active">
       <header>
-        <div class="brand">
-          <div class="logo">+</div>
-          <div>
-            <h1>ToDo+ & Boîte à Idées</h1>
-            <p class="lead">Organisez vos tâches et capturez vos inspirations</p>
-          </div>
+      <div class="brand">
+        <div class="logo">+</div>
+        <div>
+          <h1>ToDo+ & Boîte à Idées</h1>
+          <p class="lead">Organisez vos tâches et capturez vos inspirations</p>
         </div>
+      </div>
 
-        <!-- BOUTON GOOGLE LOGIN -->
+      <!-- CONTENEUR du bouton Google (évite les conflits) -->
+      <div class="google-login-box" style="display:flex;align-items:center;">
         <button id="google-login"
           style="padding:10px 16px; border:1px solid #dadce0; border-radius:4px;
                 background:white; font-family:Roboto, sans-serif; font-size:14px;
@@ -423,7 +424,9 @@
               style="width:18px;height:18px;margin-right:8px;">
           Se connecter avec Google
         </button>
-      </header>
+      </div>
+    </header>
+
 
       <div class="home-container">
         <div class="home-buttons">
