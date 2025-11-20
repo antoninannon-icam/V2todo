@@ -611,10 +611,13 @@
       let toRemove = [];
       
       let time = null;
-      const timeMatch = lower.match(/(\b[0-2]?\d(?:h[0-5]?\d|\:[0-5]\d)?\b)/);
+      const timeMatch = lower.match(/\b([0-2]?\d)(?:h|H|:)([0-5]\d)?\b|\b([0-2]?\d)\s*(?:heure|heures)\b/);
       if(timeMatch){
-        time = timeMatch[1].replace('h', ':').replace('H',':').replace(/\s+/g,'');
-        toRemove.push(timeMatch[1]);
+        // timeMatch[1] ou timeMatch[3] contient l'heure
+        const hour = timeMatch[1] || timeMatch[3];
+        const minutes = timeMatch[2] || '00';
+        time = `${hour.padStart(2, '0')}:${minutes}`;
+        toRemove.push(timeMatch[0]);
       }
       
       if(lower.match(/\bapr[eè]s[-\s]?midi\b/)){
@@ -655,7 +658,7 @@
         'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12, 'decembre': 12
       };
       
-      if(!date){
+       if(!date){
         for(const [monthName, monthNum] of Object.entries(monthNames)){
           const monthPattern = new RegExp(`(\\b\\d{1,2})\\s+${monthName}\\b`, 'i');
           const match = lower.match(monthPattern);
@@ -663,8 +666,15 @@
             const day = parseInt(match[1], 10);
             const now = new Date();
             let year = now.getFullYear();
-            const testDate = new Date(year, monthNum - 1, day);
-            if(testDate < now) year++;
+            
+            // Créer une date de test avec l'heure actuelle pour une comparaison précise
+            const testDate = new Date(year, monthNum - 1, day, 23, 59, 59);
+            
+            // Si la date de test est dans le passé, utiliser l'année suivante
+            if(testDate < now) {
+              year++;
+            }
+            
             const mm = String(monthNum).padStart(2,'0');
             const dd = String(day).padStart(2,'0');
             date = `${year}-${mm}-${dd}`;
@@ -802,64 +812,58 @@
 // FONCTION D'EXPORT VERS LIEN GOOGLE CALENDAR (OUVRE LE FORMULAIRE DE CRÉATION)
 // Version optimisée pour la robustesse des dates.
 // ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// FONCTION D'EXPORT VERS LIEN GOOGLE CALENDAR (OUVRE LE FORMULAIRE DE CRÉATION)
+// Version corrigée pour gérer correctement toutes les dates
+// ----------------------------------------------------------------------
 function exportTaskToGoogleCreationLink(task) {
     if (!task.title || !task.date) {
         alert("Impossible de créer le lien : La tâche doit avoir un titre et une date.");
         return;
     }
 
-    // 1. ANALYSE SÉCURISÉE de la date (task.date est au format 'AAAA-MM-JJ')
-    // Extraction des composants numériques de la date (mois est 1-basé)
-    const [year, month, day] = task.date.split('-').map(Number);
-    
-    // Utilitaire pour formater en YYYYMMDD
-    const formatGoogleDate = (y, m, d) => {
-        return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
-    };
+    // Vérification que la date est au bon format YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(task.date)) {
+        alert("Format de date invalide. Attendu: YYYY-MM-DD");
+        return;
+    }
 
     let start, end;
     const isAllDay = !task.time;
     
     if (isAllDay) {
         // --- Événement Toute la Journée (Format: YYYYMMDD/YYYYMMDD+1) ---
+        // Simplement remplacer les tirets pour le format Google
+        start = task.date.replace(/-/g, '');
         
-        // Date de début (la plus sûre : simple remplacement de la chaîne YYYY-MM-JJ)
-        start = task.date.replace(/-/g, ''); 
-
-        // Calcul de la date de fin (J+1) pour l'événement 'All Day'
-        // Nous utilisons l'objet Date pour gérer les sauts de mois/année de manière fiable.
-        // 'month - 1' car le constructeur de Date JS attend le mois 0-basé (0 pour janvier)
-        const startDateObj = new Date(year, month - 1, day); 
-        const endDateObj = new Date(startDateObj);
-        endDateObj.setDate(endDateObj.getDate() + 1); // Ajout d'un jour
-
-        const endYear = endDateObj.getFullYear();
-        const endMonth = endDateObj.getMonth() + 1; // Reconversion en 1-basé
-        const endDay = endDateObj.getDate();
-        end = formatGoogleDate(endYear, endMonth, endDay);
+        // Calculer le jour suivant
+        const dateObj = new Date(task.date + 'T12:00:00');
+        dateObj.setDate(dateObj.getDate() + 1);
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        end = `${y}${m}${d}`;
         
     } else {
         // --- Événement Horodaté (Format: YYYYMMDDThhmmss/YYYYMMDDThhmmss+1h) ---
+        const [hours, minutes] = task.time.split(':').map(x => parseInt(x, 10) || 0);
         
-        const [hours, minutes] = task.time.split(':').map(Number);
-        
-        // Création de l'objet Date en heure locale (mois 0-basé)
-        let startDate = new Date(year, month - 1, day, hours, minutes, 0); 
+        // Créer la date de début avec l'heure
+        const startDate = new Date(task.date + 'T' + task.time + ':00');
         
         // Date de fin: 1 heure plus tard
-        let endDate = new Date(startDate);
+        const endDate = new Date(startDate);
         endDate.setHours(endDate.getHours() + 1);
 
-        // Utilitaire pour formater Date object en YYYYMMDDThhmmss
-        // Utilisation de .get...() qui renvoie les valeurs en heure LOCALE
+        // Formater les dates au format Google
         const formatDateTime = (d) => {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, '0');
-            const dt = String(d.getDate()).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
             const h = String(d.getHours()).padStart(2, '0');
             const min = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
-            return `${y}${m}${dt}T${h}${min}${s}`;
+            return `${y}${m}${day}T${h}${min}${s}`;
         };
 
         start = formatDateTime(startDate);
@@ -868,16 +872,15 @@ function exportTaskToGoogleCreationLink(task) {
     
     const description = `Contenu:\n${task.content}\n\nCatégorie: ${task.category || 'Personnel'}\nPriorité: ${task.priority || 'Moyenne'}`;
 
-    // 2. Construction de l'URL Google Calendar
+    // Construction de l'URL Google Calendar
     const url = new URL('https://calendar.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE'); 
     url.searchParams.append('text', `ToDo+: ${task.title}`);
     url.searchParams.append('dates', `${start}/${end}`);
     url.searchParams.append('details', description);
-    // CRUCIAL: Fournir le fuseau horaire de l'utilisateur pour l'interprétation des heures locales.
     url.searchParams.append('ctz', Intl.DateTimeFormat().resolvedOptions().timeZone); 
 
-    // 3. Ouverture du lien dans un nouvel onglet
+    // Ouverture du lien dans un nouvel onglet
     window.open(url.toString(), '_blank');
 }
     
