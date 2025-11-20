@@ -416,14 +416,16 @@
 
       <!-- CONTENEUR du bouton Google (évite les conflits) -->
       <div class="google-login-box" style="display:flex;align-items:center;">
-        <button id="google-login"
-          style="padding:10px 16px; border:1px solid #dadce0; border-radius:4px;
-                background:white; font-family:Roboto, sans-serif; font-size:14px;
-                cursor:pointer; display:inline-flex; align-items:center;">
-          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png"
-              style="width:18px;height:18px;margin-right:8px;">
-          Se connecter avec Google
-        </button>
+        <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+          const btn = document.getElementById('google-login');
+          if(btn){
+            btn.addEventListener('click', ()=>{
+              window.location.href = 'http://localhost:3000/auth/google';
+            });
+          }
+        });
+        </script>
       </div>
     </header>
 
@@ -562,7 +564,11 @@
 
   <script>
     /* ---------- Début du script complet mis à jour pour la méthode URL Google ---------- */
-
+    if (!window.location.search.includes("connected=true")) {
+     window.location.href = "login.html";
+    
+    
+    }
     const STORAGE_TASKS = 'todo_plus_tasks_v1';
     const STORAGE_IDEAS = 'todo_plus_ideas_v1';
     const STORAGE_CATEGORIES = 'todo_plus_categories_v1';
