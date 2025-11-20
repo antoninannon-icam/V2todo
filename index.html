@@ -57,7 +57,7 @@
     .logo.ideas{background:linear-gradient(135deg,var(--accent-ideas),var(--accent-ideas-strong))}
     h1{margin:0;font-size:18px;letter-spacing:-0.2px}
     p.lead{margin:0;color:var(--muted);font-size:13px}
-
+    
     .home-container{display:flex;flex-direction:column;gap:32px}
     .home-buttons{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     .home-btn{
@@ -88,7 +88,7 @@
     .home-btn.ideas .icon{background:linear-gradient(135deg,var(--accent-ideas),var(--accent-ideas-strong))}
     .home-btn h2{margin:0;font-size:22px}
     .home-btn p{margin:0;color:var(--muted);font-size:14px}
-
+    
     .preview-section{display:flex;flex-direction:column;gap:12px}
     .preview-section h3{margin:0;font-size:16px;color:var(--muted)}
     .preview-cards{display:flex;flex-direction:column;gap:8px}
@@ -107,10 +107,10 @@
     .preview-card-content{flex:1;display:flex;flex-direction:column;gap:4px}
     .preview-card-title{font-size:14px;font-weight:500}
     .preview-card-meta{font-size:12px;color:var(--muted)}
-
+    
     .screen{display:none}
     .screen.active{display:flex;flex-direction:column;gap:18px}
-
+    
     .input-row{display:flex;gap:12px;align-items:center}
     .input {
       flex:1;display:flex;gap:10px;align-items:center;
@@ -136,7 +136,7 @@
       cursor:pointer;color:var(--muted);transition:all 0.2s;
     }
     button.icon-btn:hover{background:rgba(0,0,0,0.03)}
-
+    
     .mic-btn{
       background:transparent;border:0;padding:8px;border-radius:50%;
       cursor:pointer;color:var(--muted);transition: all 0.3s ease;
@@ -148,7 +148,7 @@
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.1); opacity: 0.8; }
     }
-
+    
     .section-title{display:flex;align-items:center;justify-content:space-between}
     .cards{display:flex;flex-direction:column;gap:12px}
     .card{
@@ -173,7 +173,7 @@
     .chip.uncategorized{background:#fef3c7;color:#92400e}
     .chip.categorized{background:#d1fae5;color:#065f46}
     .done .task-title{ text-decoration: line-through; color: var(--muted) }
-
+    
     /* Category dropdown */
     .category-select{
       font-size:12px;
@@ -194,7 +194,7 @@
       background:white;
       color:#000;
     }
-
+    
     .card.editing {padding: 18px;gap: 12px;border: none}
     .edit-form {display: flex;flex-direction: column;gap: 12px;animation: slideDown 0.2s ease}
     @keyframes slideDown {
@@ -219,7 +219,7 @@
     }
     .btn-save {background: var(--accent);color: white}
     .btn-cancel {background: rgba(0,0,0,0.03);color: var(--muted)}
-
+    
     .card.expanded{border-radius:18px;padding:20px}
     .note-content{
       margin:12px 0;
@@ -232,12 +232,12 @@
       max-height:400px;
       overflow-y:auto;
     }
-
+    
     details{background:transparent;border:0}
     summary{cursor:pointer;list-style:none;outline:none;display:flex;align-items:center;gap:8px;padding:8px;border-radius:12px}
     .small-muted{font-size:13px;color:var(--muted)}
     .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-
+    
     @media (max-width:768px){
       body{
         padding:12px;
@@ -336,7 +336,7 @@
         font-size:13px;
       }
     }
-
+    
     @media (max-width:480px){
       body{
         padding:8px;
@@ -406,30 +406,15 @@
   <main class="app" id="app">
     <div id="homeScreen" class="screen active">
       <header>
-      <div class="brand">
-        <div class="logo">+</div>
-        <div>
-          <h1>ToDo+ & Boîte à Idées</h1>
-          <p class="lead">Organisez vos tâches et capturez vos inspirations</p>
+        <div class="brand">
+          <div class="logo">+</div>
+          <div>
+            <h1>ToDo+ & Boîte à Idées</h1>
+            <p class="lead">Organisez vos tâches et capturez vos inspirations</p>
+          </div>
         </div>
-      </div>
-
-      <!-- CONTENEUR du bouton Google (évite les conflits) -->
-      <div class="google-login-box" style="display:flex;align-items:center;">
-        <script>
-        document.addEventListener('DOMContentLoaded', ()=>{
-          const btn = document.getElementById('google-login');
-          if(btn){
-            btn.addEventListener('click', ()=>{
-              window.location.href = 'http://localhost:3000/auth/google';
-            });
-          }
-        });
-        </script>
-      </div>
-    </header>
-
-
+      </header>
+      
       <div class="home-container">
         <div class="home-buttons">
           <div class="home-btn ideas" onclick="showScreen('ideas')">
@@ -439,7 +424,7 @@
               <p>Capturez vos inspirations du moment</p>
             </div>
           </div>
-
+          
           <div class="home-btn todo" onclick="showScreen('todo')">
             <div class="icon"><span class="material-icons">check_circle</span></div>
             <div>
@@ -448,19 +433,19 @@
             </div>
           </div>
         </div>
-
+        
         <div class="preview-section">
           <h3>Prochaines tâches</h3>
           <div class="preview-cards" id="todoPreview"></div>
         </div>
-
+        
         <div class="preview-section">
           <h3>Dernières idées</h3>
           <div class="preview-cards" id="ideasPreview"></div>
         </div>
       </div>
     </div>
-
+    
     <div id="todoScreen" class="screen">
       <header>
         <div class="brand">
@@ -479,7 +464,7 @@
           <button id="btnImport" class="icon-btn" title="Importer"><span class="material-icons">file_upload</span></button>
         </div>
       </header>
-
+      
       <section class="input-row">
         <div class="input">
           <span class="material-icons" style="color:var(--muted)">edit_note</span>
@@ -490,7 +475,7 @@
         </div>
         <button id="addBtn" class="btn"><span class="material-icons">add</span> Ajouter</button>
       </section>
-
+      
       <section>
         <div class="section-title">
           <h2 style="margin:0">À faire</h2>
@@ -498,12 +483,12 @@
         </div>
         <div class="cards" id="todoList"></div>
       </section>
-
+      
       <details id="donePanel">
         <summary><span class="small-muted">Terminées (<span id="countDone">0</span>)</span></summary>
         <div class="cards" id="doneList" style="margin-top:8px"></div>
       </details>
-
+      
       <footer style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
         <div class="controls">
           <button id="clearDone" class="icon-btn" title="Vider les terminées">Vider</button>
@@ -512,7 +497,7 @@
         <div class="small-muted">Stockage local</div>
       </footer>
     </div>
-
+    
     <div id="ideasScreen" class="screen">
       <header>
         <div class="brand">
@@ -530,7 +515,7 @@
           <button id="btnImportIdeas" class="icon-btn" title="Importer"><span class="material-icons">file_upload</span></button>
         </div>
       </header>
-
+      
       <section class="input-row">
         <div class="input">
           <span class="material-icons" style="color:var(--muted)">notes</span>
@@ -541,7 +526,7 @@
         </div>
         <button id="addIdeaBtn" class="btn ideas-btn"><span class="material-icons">add</span> Ajouter</button>
       </section>
-
+      
       <section>
         <div class="section-title">
           <h2 style="margin:0">Mes idées</h2>
@@ -549,7 +534,7 @@
         </div>
         <div class="cards" id="ideasList"></div>
       </section>
-
+      
       <footer style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
         <div class="controls">
           <button id="clearAllIdeas" class="icon-btn" title="Supprimer toutes les idées">Supprimer tout</button>
@@ -558,17 +543,13 @@
       </footer>
     </div>
   </main>
-
+  
   <input type="file" id="fileInput" style="display:none" accept="application/json" />
   <input type="file" id="fileInputIdeas" style="display:none" accept="application/json" />
-
+  
   <script>
     /* ---------- Début du script complet mis à jour pour la méthode URL Google ---------- */
-    if (!window.location.search.includes("connected=true")) {
-     window.location.href = "login.html";
-    
-    
-    }
+
     const STORAGE_TASKS = 'todo_plus_tasks_v1';
     const STORAGE_IDEAS = 'todo_plus_ideas_v1';
     const STORAGE_CATEGORIES = 'todo_plus_categories_v1';
@@ -576,16 +557,16 @@
     let ideas = [];
     let customCategories = [];
     let currentScreen = 'home';
-
+    
     function uid() { return Math.random().toString(36).slice(2,9); }
-
+    
     function save() {
       localStorage.setItem(STORAGE_TASKS, JSON.stringify(tasks));
       localStorage.setItem(STORAGE_IDEAS, JSON.stringify(ideas));
       localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(customCategories));
       render();
     }
-
+    
     function load() {
       try {
         tasks = JSON.parse(localStorage.getItem(STORAGE_TASKS) || '[]');
@@ -615,33 +596,30 @@
         return i;
       });
     }
-
+    
     function showScreen(screen) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screen + 'Screen').classList.add('active');
       currentScreen = screen;
       render();
     }
-
+    
     function parseInput(text){
       text = (text || '').trim();
       if(!text) return null;
       const lower = text.toLowerCase();
       let toRemove = [];
-
+      
       let time = null;
-      const timeMatch = lower.match(/(\b[0-2]?\d(?:h[0-5]?\d|\:[0-5]\d)?\b)/);
       const timeMatch = lower.match(/\b([0-2]?\d)(?:h|H|:)([0-5]\d)?\b|\b([0-2]?\d)\s*(?:heure|heures)\b/);
       if(timeMatch){
-        time = timeMatch[1].replace('h', ':').replace('H',':').replace(/\s+/g,'');
-        toRemove.push(timeMatch[1]);
         // timeMatch[1] ou timeMatch[3] contient l'heure
         const hour = timeMatch[1] || timeMatch[3];
         const minutes = timeMatch[2] || '00';
         time = `${hour.padStart(2, '0')}:${minutes}`;
         toRemove.push(timeMatch[0]);
       }
-
+      
       if(lower.match(/\bapr[eè]s[-\s]?midi\b/)){
         if(!time) time = '14:00';
         toRemove.push('après-midi', 'après midi', 'apres-midi', 'apres midi');
@@ -652,7 +630,7 @@
         if(!time) time = '19:00';
         toRemove.push('soir');
       }
-
+      
       let date = null;
       const relativeMatch = lower.match(/dans\s+(\d+)\s+(jour|semaine|mois|an|année)[s]?/);
       if(relativeMatch){
@@ -666,21 +644,20 @@
         date = d.toISOString().slice(0,10);
         toRemove.push(relativeMatch[0]);
       }
-
+      
       if(!date && lower.includes('la semaine prochaine')){
         const d = new Date();
         d.setDate(d.getDate() + 7);
         date = d.toISOString().slice(0,10);
         toRemove.push('la semaine prochaine');
       }
-
+      
       const monthNames = {
         'janvier': 1, 'février': 2, 'fevrier': 2, 'mars': 3, 'avril': 4,
         'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8, 'aout': 8,
         'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12, 'decembre': 12
       };
-
-      if(!date){
+      
        if(!date){
         for(const [monthName, monthNum] of Object.entries(monthNames)){
           const monthPattern = new RegExp(`(\\b\\d{1,2})\\s+${monthName}\\b`, 'i');
@@ -689,8 +666,6 @@
             const day = parseInt(match[1], 10);
             const now = new Date();
             let year = now.getFullYear();
-            const testDate = new Date(year, monthNum - 1, day);
-            if(testDate < now) year++;
             
             // Créer une date de test avec l'heure actuelle pour une comparaison précise
             const testDate = new Date(year, monthNum - 1, day, 23, 59, 59);
@@ -708,7 +683,7 @@
           }
         }
       }
-
+      
       if(!date){
         const dateMatch = lower.match(/(\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b)/);
         if(dateMatch) {
@@ -723,7 +698,7 @@
           }
         }
       }
-
+      
       if(!date){
         const weekdays = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
         for(let i=0;i<weekdays.length;i++){
@@ -744,7 +719,7 @@
             break;
           }
         }
-
+        
         if(!date){
           for(let i=0;i<weekdays.length;i++){
             if(lower.includes(weekdays[i])){
@@ -764,7 +739,7 @@
             }
           }
         }
-
+        
         if(!date){
           if(lower.includes('aujourd')){ 
             date = (new Date()).toISOString().slice(0,10);
@@ -776,7 +751,7 @@
           }
         }
       }
-
+      
       const categories = [
         {k:['course','courses','acheter'],'c':'Courses'},
         {k:['rendez','médecin','rdv','dentiste','docteur'],'c':'Santé'},
@@ -792,7 +767,7 @@
           }
         }
       }
-
+      
       let priority = 'Moyenne';
       if(lower.includes('urgent') || lower.includes('maintenant')) {
         priority = 'Haute';
@@ -801,25 +776,25 @@
         priority = 'Basse';
         toRemove.push('basse', 'faible');
       }
-
+      
       let title = text;
       let content = text;
-
+      
       if(date || time || category !== 'Personnel' || priority !== 'Moyenne'){
         // Remove keywords from the main text to get a cleaner title/content
         let cleanText = text;
-
+        
         // Remove keywords/time/date elements
         const removeRegex = new RegExp(`\\b(?:${toRemove.filter(Boolean).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
         cleanText = cleanText.replace(removeRegex, ' ').replace(/\s+/g, ' ').trim();
-
+        
         // Use the cleaned text for content, and generate a title from it
         content = cleanText || text;
         title = generateSemanticTitle(content);
       } else {
         title = generateSemanticTitle(text);
       }
-
+      
       return {
         id: uid(),
         title: title,
@@ -847,14 +822,6 @@ function exportTaskToGoogleCreationLink(task) {
         return;
     }
 
-    // 1. ANALYSE SÉCURISÉE de la date (task.date est au format 'AAAA-MM-JJ')
-    // Extraction des composants numériques de la date (mois est 1-basé)
-    const [year, month, day] = task.date.split('-').map(Number);
-    
-    // Utilitaire pour formater en YYYYMMDD
-    const formatGoogleDate = (y, m, d) => {
-        return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
-    };
     // Vérification que la date est au bon format YYYY-MM-DD
     if (!/^\d{4}-\d{2}-\d{2}$/.test(task.date)) {
         alert("Format de date invalide. Attendu: YYYY-MM-DD");
@@ -863,26 +830,12 @@ function exportTaskToGoogleCreationLink(task) {
 
     let start, end;
     const isAllDay = !task.time;
-
+    
     if (isAllDay) {
         // --- Événement Toute la Journée (Format: YYYYMMDD/YYYYMMDD+1) ---
         // Simplement remplacer les tirets pour le format Google
         start = task.date.replace(/-/g, '');
-
-        // Date de début (la plus sûre : simple remplacement de la chaîne YYYY-MM-JJ)
-        start = task.date.replace(/-/g, ''); 
-
-        // Calcul de la date de fin (J+1) pour l'événement 'All Day'
-        // Nous utilisons l'objet Date pour gérer les sauts de mois/année de manière fiable.
-        // 'month - 1' car le constructeur de Date JS attend le mois 0-basé (0 pour janvier)
-        const startDateObj = new Date(year, month - 1, day); 
-        const endDateObj = new Date(startDateObj);
-        endDateObj.setDate(endDateObj.getDate() + 1); // Ajout d'un jour
-
-        const endYear = endDateObj.getFullYear();
-        const endMonth = endDateObj.getMonth() + 1; // Reconversion en 1-basé
-        const endDay = endDateObj.getDate();
-        end = formatGoogleDate(endYear, endMonth, endDay);
+        
         // Calculer le jour suivant
         const dateObj = new Date(task.date + 'T12:00:00');
         dateObj.setDate(dateObj.getDate() + 1);
@@ -890,59 +843,47 @@ function exportTaskToGoogleCreationLink(task) {
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
         const d = String(dateObj.getDate()).padStart(2, '0');
         end = `${y}${m}${d}`;
-
+        
     } else {
         // --- Événement Horodaté (Format: YYYYMMDDThhmmss/YYYYMMDDThhmmss+1h) ---
         const [hours, minutes] = task.time.split(':').map(x => parseInt(x, 10) || 0);
-
-        const [hours, minutes] = task.time.split(':').map(Number);
         
-        // Création de l'objet Date en heure locale (mois 0-basé)
-        let startDate = new Date(year, month - 1, day, hours, minutes, 0); 
         // Créer la date de début avec l'heure
         const startDate = new Date(task.date + 'T' + task.time + ':00');
-
+        
         // Date de fin: 1 heure plus tard
-        let endDate = new Date(startDate);
         const endDate = new Date(startDate);
         endDate.setHours(endDate.getHours() + 1);
 
-        // Utilitaire pour formater Date object en YYYYMMDDThhmmss
-        // Utilisation de .get...() qui renvoie les valeurs en heure LOCALE
         // Formater les dates au format Google
         const formatDateTime = (d) => {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, '0');
-            const dt = String(d.getDate()).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             const h = String(d.getHours()).padStart(2, '0');
             const min = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
-            return `${y}${m}${dt}T${h}${min}${s}`;
             return `${y}${m}${day}T${h}${min}${s}`;
         };
 
         start = formatDateTime(startDate);
         end = formatDateTime(endDate);
     }
-
+    
     const description = `Contenu:\n${task.content}\n\nCatégorie: ${task.category || 'Personnel'}\nPriorité: ${task.priority || 'Moyenne'}`;
 
-    // 2. Construction de l'URL Google Calendar
     // Construction de l'URL Google Calendar
     const url = new URL('https://calendar.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE'); 
     url.searchParams.append('text', `ToDo+: ${task.title}`);
     url.searchParams.append('dates', `${start}/${end}`);
     url.searchParams.append('details', description);
-    // CRUCIAL: Fournir le fuseau horaire de l'utilisateur pour l'interprétation des heures locales.
     url.searchParams.append('ctz', Intl.DateTimeFormat().resolvedOptions().timeZone); 
 
-    // 3. Ouverture du lien dans un nouvel onglet
     // Ouverture du lien dans un nouvel onglet
     window.open(url.toString(), '_blank');
 }
-
+    
     /* --- Title generator: Semantic, Keyword-based (up to 10 words) --- */
     function generateSemanticTitle(content) {
       if (!content) return '';
@@ -951,7 +892,7 @@ function exportTaskToGoogleCreationLink(task) {
       text = text.replace(/[\r\n]+/g, '. ').replace(/[«»"()]/g, '').trim();
       const sentences = text.split(/[.?!]/).map(s => s.trim()).filter(Boolean);
       let mainSentence = sentences.length ? sentences[0] : text;
-
+      
       // 2. Comprehensive French Stopwords List (expanded for better filtering)
       const stopwords = new Set([
         // Articles/Determinants
@@ -967,7 +908,7 @@ function exportTaskToGoogleCreationLink(task) {
         // Other common fillers/small words
         'chose', 'truc', 'quelque', 'ici', 'là', 'juste', 'petit', 'grande', 'faire', 'etc', 'moi', 'toi', 'il', 'elle', 'nous', 'vous', 'ils', 'elles', 'ça', 'ceci', 'cela'
       ]);
-
+      
       // 3. Keyword Extraction (for long texts)
       const allWords = text.split(/\s+/)
         .map(w => w.replace(/[^\wÀ-ÿ-]/g, '').toLowerCase())
@@ -988,12 +929,12 @@ function exportTaskToGoogleCreationLink(task) {
 
       let titleWords = [];
       const MAX_LENGTH = 10;
-
+      
       // Keep words from the first sentence that are either stop-words (for flow) or important keywords
       for (const w of mainWords) {
         if (titleWords.length >= MAX_LENGTH) break;
         const lw = w.toLowerCase();
-
+        
         // Critère d'inclusion : un mot est gardé s'il est un mot vide (pour la grammaire) 
         // OU s'il est un mot clé important (présent dans les 5 premiers mots les plus fréquents du texte entier, ou si sa fréquence est > 1)
         if (stopwords.has(lw) || frequency[lw] > 1 || sortedKeywords.slice(0, 5).includes(lw)) {
@@ -1003,7 +944,7 @@ function exportTaskToGoogleCreationLink(task) {
 
       // Final clean up and capitalization
       let title = titleWords.join(' ').replace(/\s+/g, ' ').trim();
-
+      
       if (title.length > 0) {
         // Remove trailing punctuation
         title = title.replace(/[,\-\s]+$/, '');
@@ -1014,7 +955,7 @@ function exportTaskToGoogleCreationLink(task) {
         const fallbackWords = content.split(/\s+/).slice(0, 5).join(' ');
         title = fallbackWords.charAt(0).toUpperCase() + fallbackWords.slice(1);
       }
-
+      
       return title;
     }
 
@@ -1027,13 +968,13 @@ function exportTaskToGoogleCreationLink(task) {
         renderIdeasScreen();
       }
     }
-
+    
     function renderHomePreviews(){
       const todoPreview = document.getElementById('todoPreview');
       const ideasPreview = document.getElementById('ideasPreview');
       const pending = tasks.filter(t=>!t.done).slice(0, 5);
       const recentIdeas = ideas.slice(0, 3);
-
+      
       if(pending.length === 0){
         todoPreview.innerHTML = '<div class="preview-card"><div class="preview-card-content"><div class="preview-card-meta" style="text-align:center">Aucune tâche en cours</div></div></div>';
       } else {
@@ -1051,7 +992,7 @@ function exportTaskToGoogleCreationLink(task) {
           todoPreview.appendChild(card);
         });
       }
-
+      
       if(recentIdeas.length === 0){
         ideasPreview.innerHTML = '<div class="preview-card"><div class="preview-card-content"><div class="preview-card-meta" style="text-align:center">Aucune idée récente</div></div></div>';
       } else {
@@ -1071,7 +1012,7 @@ function exportTaskToGoogleCreationLink(task) {
         });
       }
     }
-
+    
     function renderTodoScreen(){
       const todoList = document.getElementById('todoList');
       const doneList = document.getElementById('doneList');
@@ -1079,36 +1020,36 @@ function exportTaskToGoogleCreationLink(task) {
       const countDone = document.getElementById('countDone');
       todoList.innerHTML = '';
       doneList.innerHTML = '';
-
+      
       const pending = tasks.filter(t=>!t.done);
       const done = tasks.filter(t=>t.done);
-
+      
       countPending.textContent = pending.length;
       countDone.textContent = done.length;
-
+      
       const order = { 'Haute':0,'Moyenne':1,'Basse':2 };
       pending.sort((a,b)=>{
         return (order[a.priority] - order[b.priority]) || ((a.date||'9999') > (b.date||'9999') ? 1 : -1) || a.createdAt.localeCompare(b.createdAt);
       });
-
+      
       pending.forEach(t => todoList.appendChild(renderTaskCard(t)));
       done.forEach(t => doneList.appendChild(renderTaskCard(t)));
     }
-
+    
     function renderTaskCard(t){
       const card = document.createElement('div');
       card.className = 'card' + (t.done ? ' done' : '');
       if(t.expanded) card.classList.add('expanded');
       card.dataset.id = t.id;
-
+      
       const contentPreview = (t.content || '').split('\n')[0];
-
+      
       // Build meta chips
       const dateChip = t.date ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">calendar_today</span>&nbsp;${formatDateFrench(t.date)}</span>` : '';
       const timeChip = t.time ? `<span class="chip"><span class="material-icons" style="font-size:14px;vertical-align:middle">schedule</span>&nbsp;${t.time}</span>` : '';
       const categoryChip = `<span class="chip">${escapeHtml(t.category || 'Personnel')}</span>`;
       const priorityChip = `<span class="chip">${escapeHtml(t.priority || 'Moyenne')}</span>`;
-
+      
       if(t.expanded){
         card.innerHTML = `
           <div class="row">
@@ -1164,27 +1105,27 @@ function exportTaskToGoogleCreationLink(task) {
       }
       return card;
     }
-
+    
     function renderIdeasScreen(){
       const ideasList = document.getElementById('ideasList');
       const countIdeas = document.getElementById('countIdeas');
       ideasList.innerHTML = '';
-
+      
       const allCategories = ['Personnel', 'Travail', 'Créatif', 'Projet', 'Inspiration', ...customCategories];
       const uniqueCategories = [...new Set(allCategories)];
-
+      
       ideas.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
-
+      
       ideas.forEach(idea => ideasList.appendChild(renderIdeaCard(idea, uniqueCategories)));
       countIdeas.textContent = ideas.length;
     }
-
+    
     function renderIdeaCard(idea, allCategories){
       const card = document.createElement('div');
       card.className = 'card';
       if(idea.expanded) card.classList.add('expanded');
       card.dataset.id = idea.id;
-
+      
       if(idea.expanded){
         card.innerHTML = `
           <div class="row">
@@ -1235,7 +1176,7 @@ function exportTaskToGoogleCreationLink(task) {
       }
       return card;
     }
-
+    
     function formatDateFrench(iso){
       try{
         const d = new Date(iso);
@@ -1244,23 +1185,23 @@ function exportTaskToGoogleCreationLink(task) {
         return iso;
       }
     }
-
+    
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
-
+    
     /* ---------- EVENTS and Handlers ---------- */
-
+    
     document.getElementById('addBtn').addEventListener('click', onAddTask);
     document.getElementById('taskInput').addEventListener('keydown', (e)=>{
       if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddTask();
     }); // single-line Enter would be inconvenient for textarea; use Ctrl+Enter or Shift+Enter to add
-
+    
     function onAddTask(){
       const input = document.getElementById('taskInput');
       const val = input.value.trim();
       if(!val) return;
-
+      
       // parse first to extract date/time/category/priority/title
       const parsed = parseInput(val);
       if(parsed){
@@ -1270,23 +1211,23 @@ function exportTaskToGoogleCreationLink(task) {
         input.rows = 2; // Reset rows
       }
     }
-
+    
     document.getElementById('todoList').addEventListener('click', handleTodoClick);
     document.getElementById('doneList').addEventListener('click', handleTodoClick);
-
+    
     function handleTodoClick(e){
       const action = e.target.closest('[data-action]');
       if(!action) return;
-
+      
       const act = action.dataset.action;
       const card = e.target.closest('.card');
       if(!card) return;
-
+      
       const id = card.dataset.id;
       const idx = tasks.findIndex(x=>x.id===id);
-
+      
       if(idx === -1) return;
-
+      
       if(act === 'toggle'){
         tasks[idx].done = !tasks[idx].done;
         tasks[idx].doneAt = tasks[idx].done ? new Date().toISOString() : null;
@@ -1322,7 +1263,7 @@ function exportTaskToGoogleCreationLink(task) {
         if(timeInput) tasks[idx].time = timeInput.value || null;
         if(categoryInput) tasks[idx].category = categoryInput.value || null;
         if(priorityInput) tasks[idx].priority = priorityInput.value || tasks[idx].priority;
-
+        
         // Recalculate title if content changed and title is empty
         if((contentInput && contentInput.value.trim() !== tasks[idx].content) || titleInput.value.trim() === '') {
             tasks[idx].title = generateSemanticTitle(tasks[idx].content);
@@ -1334,7 +1275,7 @@ function exportTaskToGoogleCreationLink(task) {
         render();
       }
     }
-
+    
     function editTask(t){
       const card = document.querySelector(`.card[data-id="${t.id}"]`);
       if(!card) return;
@@ -1386,17 +1327,17 @@ function exportTaskToGoogleCreationLink(task) {
         </div>
       `;
     }
-
+    
     document.getElementById('addIdeaBtn').addEventListener('click', onAddIdea);
     document.getElementById('ideaInput').addEventListener('keydown', (e)=>{
       if(e.key==='Enter' && (e.ctrlKey || e.shiftKey)) onAddIdea();
     });
-
+    
     function onAddIdea(){
       const input = document.getElementById('ideaInput');
       const val = input.value.trim();
       if(!val) return;
-
+      
       const title = generateSemanticTitle(val);
       ideas.unshift({
         id: uid(),
@@ -1409,7 +1350,7 @@ function exportTaskToGoogleCreationLink(task) {
       input.value = '';
       input.rows = 2; // Reset rows
     }
-
+    
     document.getElementById('ideasList').addEventListener('click', (e)=>{
       const action = e.target.closest('[data-action]');
       if(action && action.dataset.action === 'quick-categorize'){
@@ -1418,17 +1359,17 @@ function exportTaskToGoogleCreationLink(task) {
         handleIdeasClick(e);
       }
     });
-
+    
     function handleQuickCategorize(e){
       const select = e.target;
       const value = select.value;
       const card = select.closest('.card');
       if(!card) return;
-
+      
       const id = card.dataset.id;
       const idx = ideas.findIndex(x=>x.id===id);
       if(idx === -1) return;
-
+      
       if(value === '__new__'){
         const newCat = prompt('Nom de la nouvelle catégorie :');
         if(newCat && newCat.trim()){
@@ -1445,20 +1386,20 @@ function exportTaskToGoogleCreationLink(task) {
         save();
       }
     }
-
+    
     function handleIdeasClick(e){
       const action = e.target.closest('[data-action]');
       if(!action) return;
-
+      
       const act = action.dataset.action;
       const card = e.target.closest('.card');
       if(!card) return;
-
+      
       const id = card.dataset.id;
       const idx = ideas.findIndex(x=>x.id===id);
-
+      
       if(idx === -1) return;
-
+      
       if(act === 'expand'){
         ideas[idx].expanded = true;
         save();
@@ -1482,7 +1423,7 @@ function exportTaskToGoogleCreationLink(task) {
         if(titleInput) ideas[idx].title = titleInput.value.trim() || ideas[idx].title;
         if(contentInput) ideas[idx].content = contentInput.value.trim() || ideas[idx].content;
         if(categoryInput) ideas[idx].category = categoryInput.value || null;
-
+        
         // Recalculate title if content changed and title is empty
         if((contentInput && contentInput.value.trim() !== ideas[idx].content) || titleInput.value.trim() === '') {
             ideas[idx].title = generateSemanticTitle(ideas[idx].content);
@@ -1491,7 +1432,7 @@ function exportTaskToGoogleCreationLink(task) {
         save();
       }
     }
-
+    
     function editIdea(idea){
       const card = document.querySelector(`.card[data-id="${idea.id}"]`);
       if(!card) return;
@@ -1528,7 +1469,7 @@ function exportTaskToGoogleCreationLink(task) {
         </div>
       `;
     }
-
+    
     // --- Clear & Export/Import ---
     document.getElementById('clearDone').addEventListener('click', ()=>{
       if(confirm('Supprimer toutes les tâches terminées ?')){
@@ -1536,7 +1477,7 @@ function exportTaskToGoogleCreationLink(task) {
         save();
       }
     });
-
+    
     document.getElementById('clearAll').addEventListener('click', ()=>{
       if(confirm('Supprimer TOUTES les tâches ?')){
         tasks = [];
@@ -1544,14 +1485,14 @@ function exportTaskToGoogleCreationLink(task) {
         scheduleAllNotifications();
       }
     });
-
+    
     document.getElementById('clearAllIdeas').addEventListener('click', ()=>{
       if(confirm('Supprimer TOUTES les idées ?')){
         ideas = [];
         save();
       }
     });
-
+    
     // Export/Import Tâches (JSON)
     document.getElementById('btnExport').addEventListener('click', ()=>{
       const data = JSON.stringify(tasks, null, 2);
@@ -1565,7 +1506,7 @@ function exportTaskToGoogleCreationLink(task) {
       a.remove();
       URL.revokeObjectURL(url);
     });
-
+    
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnImport').addEventListener('click', ()=> fileInput.click());
     fileInput.addEventListener('change', async (e)=>{
@@ -1588,7 +1529,7 @@ function exportTaskToGoogleCreationLink(task) {
       }
       fileInput.value = '';
     });
-
+    
     // Export/Import Idées (JSON)
     document.getElementById('btnExportIdeas').addEventListener('click', ()=>{
       const data = JSON.stringify(ideas, null, 2);
@@ -1602,7 +1543,7 @@ function exportTaskToGoogleCreationLink(task) {
       a.remove();
       URL.revokeObjectURL(url);
     });
-
+    
     const fileInputIdeas = document.getElementById('fileInputIdeas');
     document.getElementById('btnImportIdeas').addEventListener('click', ()=> fileInputIdeas.click());
     fileInputIdeas.addEventListener('change', async (e)=>{
@@ -1625,7 +1566,7 @@ function exportTaskToGoogleCreationLink(task) {
       }
       fileInputIdeas.value = '';
     });
-
+    
     // --- Notifications (Speech Recognition) ---
     const btnNotif = document.getElementById('btnNotif');
     btnNotif.addEventListener('click', async ()=>{
@@ -1646,17 +1587,17 @@ function exportTaskToGoogleCreationLink(task) {
         alert('Permission refusée.');
       }
     });
-
+    
     let recognition = null;
     let isRecording = false;
-
+    
     if (window.SpeechRecognition || window.webkitSpeechRecognition) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRecognition();
       recognition.lang = 'fr-FR';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-
+      
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         const currentInput = (currentScreen === 'todo' ? document.getElementById('taskInput') : document.getElementById('ideaInput'));
@@ -1666,12 +1607,12 @@ function exportTaskToGoogleCreationLink(task) {
         }
         stopRecording();
       };
-
+      
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         stopRecording();
       };
-
+      
       recognition.onend = () => {
         stopRecording();
       };
@@ -1681,7 +1622,7 @@ function exportTaskToGoogleCreationLink(task) {
       if(document.getElementById('micBtnTodo')) document.getElementById('micBtnTodo').style.display = 'none';
       if(document.getElementById('micBtnIdea')) document.getElementById('micBtnIdea').style.display = 'none';
     }
-
+    
     function startRecording(){
       if(!recognition) {
         alert('Reconnaissance vocale non supportée par ce navigateur.');
@@ -1696,7 +1637,7 @@ function exportTaskToGoogleCreationLink(task) {
         stopRecording();
       }
     }
-
+    
     function stopRecording(){
       isRecording = false;
       const btnTodo = document.getElementById('micBtnTodo');
@@ -1704,7 +1645,7 @@ function exportTaskToGoogleCreationLink(task) {
       if(btnTodo) btnTodo.classList.remove('recording');
       if(btnIdea) btnIdea.classList.remove('recording');
     }
-
+    
     if (recognition) {
         document.getElementById('micBtnTodo').addEventListener('click', () => {
             if(isRecording) recognition.stop();
@@ -1715,24 +1656,24 @@ function exportTaskToGoogleCreationLink(task) {
             else startRecording();
         });
     }
-
+    
     let scheduledTimers = [];
-
+    
     function clearTimers(){
       scheduledTimers.forEach(id=>clearTimeout(id));
       scheduledTimers = [];
     }
-
+    
     function scheduleAllNotifications(){
       clearTimers();
       if(Notification.permission !== 'granted') return;
       const now = Date.now();
-
+      
       for(const t of tasks){
         if(t.done) continue;
         if(t.date){
           let ts = new Date(t.date + 'T00:00:00').getTime();
-
+          
           if(t.time){
             const parts = t.time.split(':').map(x=>parseInt(x,10));
             if(parts.length>=2){
@@ -1744,7 +1685,7 @@ function exportTaskToGoogleCreationLink(task) {
             // All-day task, notify at 9am on that day
             const d = new Date(t.date); d.setHours(9,0,0,0); ts = d.getTime();
           }
-
+          
           const delay = ts - now;
           // Schedule if the notification is in the future but not more than 7 days away
           if(delay > 0 && delay < 1000 * 60 * 60 * 24 * 7){
@@ -1756,22 +1697,11 @@ function exportTaskToGoogleCreationLink(task) {
         }
       }
     }
-
+    
     load();
     render();
     scheduleAllNotifications();
 /* ---------- Fin du script complet mis à jour ---------- */
-</script>
-  <script>
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('google-login');
-  if(btn){
-    btn.addEventListener('click', ()=>{
-      // Vers ton backend Express/Nest
-      window.location.href = 'http://localhost:3000/auth/google';
-    });
-  }
-});
-</script>
+  </script>
 </body>
 </html>
