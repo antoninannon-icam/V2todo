@@ -1,24 +1,86 @@
 <!doctype html>
-<html>
+<html lang="fr">
 <head>
-<title>Connexion</title>
-<meta charset="utf-8">
-</head>
-<body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
-    <h1>Connexion requise</h1>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Connexion — ToDo+</title>
 
-    <button id="google-login"
-      style="padding:12px 20px; border:1px solid #dadce0; border-radius:8px;
-            background:white; font-size:16px; cursor:pointer; display:flex;align-items:center;">
-        <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png"
-             style="width:20px;height:20px;margin-right:10px;">
-        Se connecter avec Google
-    </button>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+      font-family: Inter, sans-serif;
+    }
+
+    .box {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    #google-btn {
+      padding: 12px 20px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: white;
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #google-btn img {
+      width: 20px;
+      height: 20px;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h1>Connexion</h1>
+  <p>Connecte-toi avec Google pour accéder à ToDo+</p>
+
+  <button id="google-btn">
+    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png">
+    Se connecter avec Google
+  </button>
+</div>
 
 <script>
-document.getElementById("google-login").onclick = () => {
+  // Quand Google renvoie ?connected=true
+  if (window.location.search.includes("connected=true")) {
+    window.location.href = "index.html";
+  }
+
+  document.getElementById("google-btn").addEventListener("click", () => {
     window.location.href = "http://localhost:3000/auth/google";
-};
+  });
 </script>
+
 </body>
 </html>
